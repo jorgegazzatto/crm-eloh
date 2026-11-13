@@ -27,6 +27,8 @@ import {
   Pencil,
 } from 'lucide-react';
 
+const STORAGE_PROJECTS_KEY = 'eloh_crm_projects';
+
 export default function ProjetosPage() {
   const [projects, setProjects] = useState<Project[]>(initialProjects);
   const [showModal, setShowModal] = useState(false);
@@ -52,6 +54,19 @@ export default function ProjetosPage() {
   const [customPartnerText, setCustomPartnerText] = useState('');
   const [showPartnerModal, setShowPartnerModal] = useState(false);
   const [partnerSearchQuery, setPartnerSearchQuery] = useState('');
+
+  // Carregar projetos sincronizados do localStorage
+  useEffect(() => {
+    try {
+      const storedProjs = localStorage.getItem(STORAGE_PROJECTS_KEY);
+      if (storedProjs) {
+        const parsed = JSON.parse(storedProjs);
+        if (Array.isArray(parsed) && parsed.length > 0) setProjects(parsed);
+      }
+    } catch (e) {
+      console.error('Erro ao ler projetos do localStorage:', e);
+    }
+  }, []);
 
   // Carregar lista sincronizada de fornecedores / parceiros do localStorage
   useEffect(() => {
@@ -123,7 +138,11 @@ export default function ProjetosPage() {
   // Excluir Projeto
   const handleDeleteProject = (projectId: string) => {
     if (confirm('Tem certeza de que deseja excluir este projeto?')) {
-      setProjects((prev) => prev.filter((p) => p.id !== projectId));
+      const updated = projects.filter((p) => p.id !== projectId);
+      setProjects(updated);
+      try {
+        localStorage.setItem(STORAGE_PROJECTS_KEY, JSON.stringify(updated));
+      } catch {}
       setShowModal(false);
     }
   };
@@ -204,29 +223,28 @@ export default function ProjetosPage() {
     let finalStatus = status;
     if (calculatedProgress === 100) finalStatus = 'COMPLETED';
 
+    let updatedProjects: Project[];
     if (editingProjectId) {
       // Atualizar projeto existente
-      setProjects((prev) =>
-        prev.map((proj) => {
-          if (proj.id !== editingProjectId) return proj;
-          return {
-            ...proj,
-            name,
-            serviceType,
-            status: finalStatus,
-            clientId,
-            clientName: client ? client.tradeName : proj.clientName,
-            startDate: startDate || todayStr,
-            targetEndDate: targetEndDate || defaultEndStr,
-            budget,
-            brainstormNotes,
-            partnerIds: selectedPartnerIds,
-            partnersInvolved: chosenPartners.join(', ') || 'Equipe Interna Elohdigital',
-            stages: stages,
-            progressPercent: calculatedProgress,
-          };
-        })
-      );
+      updatedProjects = projects.map((proj) => {
+        if (proj.id !== editingProjectId) return proj;
+        return {
+          ...proj,
+          name,
+          serviceType,
+          status: finalStatus,
+          clientId,
+          clientName: client ? client.tradeName : proj.clientName,
+          startDate: startDate || todayStr,
+          targetEndDate: targetEndDate || defaultEndStr,
+          budget,
+          brainstormNotes,
+          partnerIds: selectedPartnerIds,
+          partnersInvolved: chosenPartners.join(', ') || 'Equipe Interna Elohdigital',
+          stages: stages,
+          progressPercent: calculatedProgress,
+        };
+      });
     } else {
       // Criar novo projeto
       const newProj: Project = {
@@ -245,16 +263,21 @@ export default function ProjetosPage() {
         stages: stages,
         progressPercent: calculatedProgress,
       };
-      setProjects([newProj, ...projects]);
+      updatedProjects = [newProj, ...projects];
     }
+
+    setProjects(updatedProjects);
+    try {
+      localStorage.setItem(STORAGE_PROJECTS_KEY, JSON.stringify(updatedProjects));
+    } catch {}
 
     setShowModal(false);
   };
 
   // Alternar conclusão de etapa de um projeto existente e recalcular progresso
   const handleToggleProjectStage = (projectId: string, stageId: string) => {
-    setProjects((prevProjects) =>
-      prevProjects.map((proj) => {
+    setProjects((prevProjects) => {
+      const updated = prevProjects.map((proj) => {
         if (proj.id !== projectId) return proj;
 
         const currentStages = proj.stages || [];
@@ -276,8 +299,14 @@ export default function ProjetosPage() {
           progressPercent: newProgress,
           status: newStatus,
         };
-      })
-    );
+      });
+
+      try {
+        localStorage.setItem(STORAGE_PROJECTS_KEY, JSON.stringify(updated));
+      } catch {}
+
+      return updated;
+    });
   };
 
   // Helper para calcular dias restantes

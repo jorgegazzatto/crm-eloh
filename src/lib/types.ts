@@ -211,6 +211,7 @@ export interface Project {
   partnerIds?: string[];
   stages?: ProjectStage[];
   progressPercent: number;
+  proposalId?: string;
 }
 
 export interface Ticket {

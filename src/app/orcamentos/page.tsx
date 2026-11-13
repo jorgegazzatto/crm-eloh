@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
-import { initialProposals, initialClients, initialSuppliers } from '@/lib/mockData';
-import { Proposal, Client, Supplier, ProposalTeamMember, ProposalStructureItem, isFreelancerOrTeam, isStructureOrApi } from '@/lib/types';
+import { initialProposals, initialClients, initialSuppliers, initialProjects } from '@/lib/mockData';
+import { Proposal, Client, Supplier, Project, ProposalTeamMember, ProposalStructureItem, isFreelancerOrTeam, isStructureOrApi } from '@/lib/types';
 import {
   Calculator,
   Plus,
@@ -30,9 +30,11 @@ import {
   Server,
   Banknote,
   Repeat,
+  FolderKanban,
 } from 'lucide-react';
 
 const STORAGE_PROPOSALS_KEY = 'eloh_crm_proposals';
+const STORAGE_PROJECTS_KEY = 'eloh_crm_projects';
 const STORAGE_CLIENTS_KEY = 'eloh_crm_clients';
 const STORAGE_SUPPLIERS_KEY = 'eloh_crm_suppliers';
 
@@ -271,6 +273,114 @@ export default function OrcamentosPage() {
     }
   };
 
+  // ----------------------------------------------------
+  // INTEGRAÇÃO AUTOMÁTICA: ORÇAMENTO APROVADO -> PROJETO & BRAINSTORM
+  // ----------------------------------------------------
+  const createProjectFromApprovedProposal = (prop: Proposal): boolean => {
+    try {
+      let existingProjects: Project[] = initialProjects;
+      const stored = localStorage.getItem(STORAGE_PROJECTS_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) existingProjects = parsed;
+      }
+
+      // Verificar se já existe um projeto gerado para esta proposta
+      const alreadyExists = existingProjects.some(
+        (p) =>
+          p.proposalId === prop.id ||
+          (p.name.trim().toLowerCase() === prop.title.trim().toLowerCase() && p.clientId === prop.clientId)
+      );
+
+      if (alreadyExists) return false;
+
+      // Detectar tipo de serviço sugerido
+      const textToAnalyze = `${prop.title} ${prop.scopeDetails}`.toLowerCase();
+      let serviceType = 'DATA_BI';
+      if (
+        textToAnalyze.includes('web') ||
+        textToAnalyze.includes('site') ||
+        textToAnalyze.includes('portal') ||
+        textToAnalyze.includes('landing') ||
+        textToAnalyze.includes('front')
+      ) {
+        serviceType = 'WEB_DEV';
+      } else if (
+        textToAnalyze.includes('automa') ||
+        textToAnalyze.includes('bot') ||
+        textToAnalyze.includes('whatsapp') ||
+        textToAnalyze.includes('workflow')
+      ) {
+        serviceType = 'AUTOMATION';
+      } else if (
+        textToAnalyze.includes('tráfego') ||
+        textToAnalyze.includes('ads') ||
+        textToAnalyze.includes('meta') ||
+        textToAnalyze.includes('google')
+      ) {
+        serviceType = 'PAID_TRAFFIC';
+      } else if (textToAnalyze.includes('consult')) {
+        serviceType = 'CONSULTING';
+      }
+
+      const partnerIds = prop.teamMembers?.map((m) => m.supplierId).filter(Boolean) || [];
+      const partnersInvolved =
+        prop.teamMembers && prop.teamMembers.length > 0
+          ? prop.teamMembers.map((m) => m.name).join(', ')
+          : 'Equipe Interna Elohdigital';
+
+      const todayIso = new Date().toISOString().split('T')[0];
+      const targetEnd =
+        prop.validUntil || new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
+
+      const newProject: Project = {
+        id: `proj-${Date.now()}`,
+        name: prop.title,
+        status: 'PLANNING', // Entra no flow de Planejamento & Brainstorm
+        serviceType,
+        clientId: prop.clientId,
+        clientName: prop.clientName,
+        startDate: todayIso,
+        targetEndDate: targetEnd,
+        budget: prop.totalAmount,
+        brainstormNotes: `🚀 Projeto aberto automaticamente a partir do Orçamento Aprovado ${prop.code}.\n\nEscopo & Especificações:\n${prop.scopeDetails || 'Sem notas adicionais inseridas no orçamento.'}`,
+        partnerIds,
+        partnersInvolved,
+        stages: [
+          { id: `stg-${Date.now()}-1`, title: 'Kick-off, Alinhamento & Briefing', completed: false },
+          { id: `stg-${Date.now()}-2`, title: 'Brainstorming & Especificação Técnica', completed: false },
+          { id: `stg-${Date.now()}-3`, title: 'Setup de Estrutura & Ferramentas', completed: false },
+          { id: `stg-${Date.now()}-4`, title: 'Desenvolvimento & Implantação', completed: false },
+          { id: `stg-${Date.now()}-5`, title: 'Homologação, Testes & Entrega Final', completed: false },
+        ],
+        progressPercent: 0,
+        proposalId: prop.id,
+      };
+
+      const updatedProjects = [newProject, ...existingProjects];
+      localStorage.setItem(STORAGE_PROJECTS_KEY, JSON.stringify(updatedProjects));
+      return true;
+    } catch (e) {
+      console.error('Erro ao integrar projeto a partir do orçamento:', e);
+      return false;
+    }
+  };
+
+  const handleApproveProposal = (prop: Proposal) => {
+    const updated = proposals.map((p) => (p.id === prop.id ? { ...p, status: 'ACCEPTED' as const } : p));
+    setProposals(updated);
+    try {
+      localStorage.setItem(STORAGE_PROPOSALS_KEY, JSON.stringify(updated));
+    } catch {}
+
+    const projectCreated = createProjectFromApprovedProposal({ ...prop, status: 'ACCEPTED' });
+    if (projectCreated) {
+      showToast(`Orçamento ${prop.code} APROVADO! Projeto aberto no flow de Projetos & Brainstorm!`);
+    } else {
+      showToast(`Orçamento ${prop.code} marcado como Aprovado!`);
+    }
+  };
+
   // Salvar Orçamento (Criar ou Atualizar)
   const handleSaveProposal = (e: React.FormEvent) => {
     e.preventDefault();
@@ -283,34 +393,45 @@ export default function OrcamentosPage() {
 
     if (editingProposalId) {
       // Atualizar proposta existente
-      const updated = proposals.map((p) => {
-        if (p.id !== editingProposalId) return p;
-        return {
-          ...p,
-          title: title.trim() || 'Proposta de Serviços Elohdigital',
-          status,
-          clientId,
-          clientName: selectedClient ? selectedClient.tradeName : p.clientName,
-          estimatedHours,
-          hourlyRate,
-          laborCost: calculatedLabor,
-          setupCost,
-          thirdPartyCost,
-          marginPercent,
-          totalAmount: finalTotal,
-          paymentTerms,
-          scopeDetails: scopeDetails.trim() || 'Serviços de consultoria, implantação técnica e validação de entrega.',
-          validUntil: validUntil || new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0],
-          teamMembers,
-          structureItems,
-        };
-      });
+      const existingProp = proposals.find((p) => p.id === editingProposalId);
+      const payload: Proposal = {
+        id: editingProposalId,
+        code: existingProp?.code || `PROP-${new Date().getFullYear()}-001`,
+        title: title.trim() || 'Proposta de Serviços Elohdigital',
+        status,
+        clientId,
+        clientName: selectedClient ? selectedClient.tradeName : existingProp?.clientName || 'Cliente',
+        estimatedHours,
+        hourlyRate,
+        laborCost: calculatedLabor,
+        setupCost,
+        thirdPartyCost,
+        marginPercent,
+        totalAmount: finalTotal,
+        paymentTerms,
+        scopeDetails: scopeDetails.trim() || 'Serviços de consultoria, implantação técnica e validação de entrega.',
+        validUntil: validUntil || new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0],
+        createdAt: existingProp?.createdAt || new Date().toISOString(),
+        teamMembers,
+        structureItems,
+      };
 
+      const updated = proposals.map((p) => (p.id === editingProposalId ? payload : p));
       setProposals(updated);
       try {
         localStorage.setItem(STORAGE_PROPOSALS_KEY, JSON.stringify(updated));
       } catch {}
-      showToast('Orçamento atualizado com sucesso!');
+
+      if (status === 'ACCEPTED') {
+        const created = createProjectFromApprovedProposal(payload);
+        if (created) {
+          showToast('Orçamento salvo como APROVADO! Novo projeto aberto no flow de Projetos & Brainstorm!');
+        } else {
+          showToast('Orçamento atualizado com sucesso!');
+        }
+      } else {
+        showToast('Orçamento atualizado com sucesso!');
+      }
     } else {
       // Criar nova proposta
       const newProp: Proposal = {
@@ -340,7 +461,17 @@ export default function OrcamentosPage() {
       try {
         localStorage.setItem(STORAGE_PROPOSALS_KEY, JSON.stringify(updated));
       } catch {}
-      showToast('Novo orçamento gerado com sucesso!');
+
+      if (status === 'ACCEPTED') {
+        const created = createProjectFromApprovedProposal(newProp);
+        if (created) {
+          showToast('Novo orçamento criado e APROVADO! Projeto aberto no flow de Projetos & Brainstorm!');
+        } else {
+          showToast('Novo orçamento gerado com sucesso!');
+        }
+      } else {
+        showToast('Novo orçamento gerado com sucesso!');
+      }
     }
 
     setShowModal(false);
@@ -559,9 +690,9 @@ export default function OrcamentosPage() {
                 className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-2xl p-5 flex flex-col justify-between transition-all shadow-xs space-y-4"
               >
                 <div>
-                  {/* Cabeçalho do Card com Código, Status e Botão EDITAR */}
+                  {/* Cabeçalho do Card com Código, Status, Botão Aprovar/Ver Projeto e Botão EDITAR */}
                   <div className="flex items-center justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-[11px] font-mono font-bold text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-200 dark:border-cyan-800/40">
                         {prop.code}
                       </span>
@@ -572,16 +703,40 @@ export default function OrcamentosPage() {
                       </span>
                     </div>
 
-                    {/* BOTÃO EDITAR NO CARD DO ORÇAMENTO */}
-                    <button
-                      type="button"
-                      onClick={() => openEditModal(prop)}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-cyan-50 dark:bg-slate-800/80 dark:hover:bg-cyan-950/60 text-slate-600 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-400 border border-slate-200 dark:border-slate-700/60 text-[11px] font-semibold transition-all hover:scale-105 active:scale-95 shadow-xs"
-                      title="Editar Valores e Dados deste Orçamento"
-                    >
-                      <Pencil className="w-3 h-3" />
-                      <span>Editar</span>
-                    </button>
+                    <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                      {/* BOTÃO DE APROVAÇÃO AUTOMÁTICA OU LINK PARA O PROJETO */}
+                      {prop.status !== 'ACCEPTED' ? (
+                        <button
+                          type="button"
+                          onClick={() => handleApproveProposal(prop)}
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[11px] font-bold transition-all hover:scale-105 active:scale-95 shadow-xs"
+                          title="Aprovar orçamento e abrir novo projeto no Flow de Projetos & Brainstorm"
+                        >
+                          <Sparkles className="w-3 h-3 text-emerald-500" />
+                          <span>Aprovar</span>
+                        </button>
+                      ) : (
+                        <a
+                          href="/projetos"
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30 text-[11px] font-bold transition-all hover:scale-105 active:scale-95 shadow-xs"
+                          title="Abrir no Flow de Projetos & Brainstorming"
+                        >
+                          <FolderKanban className="w-3 h-3 text-cyan-500" />
+                          <span>Ver Projeto →</span>
+                        </a>
+                      )}
+
+                      {/* BOTÃO EDITAR NO CARD DO ORÇAMENTO */}
+                      <button
+                        type="button"
+                        onClick={() => openEditModal(prop)}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-cyan-50 dark:bg-slate-800/80 dark:hover:bg-cyan-950/60 text-slate-600 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-400 border border-slate-200 dark:border-slate-700/60 text-[11px] font-semibold transition-all hover:scale-105 active:scale-95 shadow-xs"
+                        title="Editar Valores e Dados deste Orçamento"
+                      >
+                        <Pencil className="w-3 h-3" />
+                        <span>Editar</span>
+                      </button>
+                    </div>
                   </div>
 
                   <h3 className="font-bold text-sm text-slate-900 dark:text-white mt-1 leading-snug">
