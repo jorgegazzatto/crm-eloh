@@ -251,3 +251,21 @@ model Transaction {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 }
+
+// ----------------------------------------------------
+// USUÁRIOS & CONTROLE DE ACESSO (RBAC)
+// ----------------------------------------------------
+model User {
+  id              String           @id @default(uuid())
+  name            String
+  email           String           @unique
+  password        String
+  role            String           @default("OPERATOR") // ADMIN, MANAGER, OPERATOR, VIEWER
+  jobTitle        String?
+  status          String           @default("ACTIVE")   // ACTIVE, INACTIVE
+  phone           String?
+  avatar          String?
+  lastLogin       DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}

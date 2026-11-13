@@ -170,3 +170,47 @@ export interface Transaction {
   supplierId?: string;
   supplierName?: string;
 }
+
+// ----------------------------------------------------
+// USUÁRIOS, SESSÃO & NÍVEIS DE PERMISSÃO
+// ----------------------------------------------------
+export type UserRole = 'ADMIN' | 'MANAGER' | 'OPERATOR' | 'VIEWER';
+export type UserStatus = 'ACTIVE' | 'INACTIVE';
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  password?: string;
+  role: UserRole;
+  jobTitle?: string;
+  avatar?: string;
+  status: UserStatus;
+  phone?: string;
+  createdAt: string;
+  lastLogin?: string;
+}
+
+export const ROLE_DEFINITIONS: Record<UserRole, { label: string; description: string; badgeColor: string }> = {
+  ADMIN: {
+    label: 'Administrador',
+    description: 'Acesso total irrestrito: gestão de usuários, permissões, financeiro, configurações e exclusões.',
+    badgeColor: 'bg-rose-100 text-rose-700 dark:bg-rose-950/80 dark:text-rose-300 border-rose-300 dark:border-rose-800/40',
+  },
+  MANAGER: {
+    label: 'Gerente / Gestor',
+    description: 'Acesso completo a projetos, clientes, comercial, orçamentos e financeiro. Sem gestão de usuários.',
+    badgeColor: 'bg-amber-100 text-amber-700 dark:bg-amber-950/80 dark:text-amber-300 border-amber-300 dark:border-amber-800/40',
+  },
+  OPERATOR: {
+    label: 'Operacional / Dev',
+    description: 'Acesso a projetos, tarefas, chamados de suporte e onboarding de clientes atribuídos.',
+    badgeColor: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-950/80 dark:text-cyan-300 border-cyan-300 dark:border-cyan-800/40',
+  },
+  VIEWER: {
+    label: 'Visualizador / Cliente',
+    description: 'Visualização de relatórios, status de projetos e histórico em modo somente leitura.',
+    badgeColor: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-300 dark:border-slate-700',
+  },
+};
+

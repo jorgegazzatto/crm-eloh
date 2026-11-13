@@ -10,6 +10,7 @@ import {
   Ticket,
   Task,
   Transaction,
+  User,
 } from './types';
 
 export const initialClients: Client[] = [
@@ -483,3 +484,55 @@ export const initialTransactions: Transaction[] = [
     paymentMethod: 'CARTAO',
   },
 ];
+
+export const initialUsers: User[] = [
+  {
+    id: 'usr-1',
+    name: 'Jorge Eloh',
+    email: 'admin@elohdigital.com.br',
+    password: 'admin123',
+    role: 'ADMIN',
+    jobTitle: 'Diretor / Administrador Geral',
+    status: 'ACTIVE',
+    phone: '(11) 99888-7766',
+    createdAt: '2026-01-01T00:00:00Z',
+    lastLogin: '2026-11-13T16:30:00Z',
+  },
+  {
+    id: 'usr-2',
+    name: 'Mariana Costa',
+    email: 'mariana@elohdigital.com.br',
+    password: 'gestao123',
+    role: 'MANAGER',
+    jobTitle: 'Gerente de Contas & Projetos',
+    status: 'ACTIVE',
+    phone: '(11) 98765-1122',
+    createdAt: '2026-01-10T10:00:00Z',
+    lastLogin: '2026-11-12T14:20:00Z',
+  },
+  {
+    id: 'usr-3',
+    name: 'Felipe Ramos',
+    email: 'felipe@elohdigital.com.br',
+    password: 'dev123',
+    role: 'OPERATOR',
+    jobTitle: 'Desenvolvedor & Automações',
+    status: 'ACTIVE',
+    phone: '(11) 97654-3344',
+    createdAt: '2026-01-20T09:00:00Z',
+    lastLogin: '2026-11-11T18:00:00Z',
+  },
+  {
+    id: 'usr-4',
+    name: 'Nexus Engenharia',
+    email: 'nexus@cliente.com.br',
+    password: 'cliente123',
+    role: 'VIEWER',
+    jobTitle: 'Acompanhamento do Cliente',
+    status: 'ACTIVE',
+    phone: '(11) 96543-2211',
+    createdAt: '2026-02-01T11:00:00Z',
+    lastLogin: '2026-11-10T10:15:00Z',
+  },
+];
+

@@ -4,6 +4,8 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCompany } from '@/context/CompanyContext';
+import { useAuth } from '@/context/AuthContext';
+import { UserRole, ROLE_DEFINITIONS } from '@/lib/types';
 import {
   LayoutDashboard,
   Users,
@@ -17,26 +19,45 @@ import {
   DollarSign,
   Package,
   Settings,
+  ShieldCheck,
+  LogOut,
 } from 'lucide-react';
 
-const menuItems = [
+interface MenuItem {
+  name: string;
+  href: string;
+  icon: any;
+  badge?: string;
+  roles?: UserRole[];
+}
+
+const allMenuItems: MenuItem[] = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Funil de Vendas', href: '/pipeline', icon: Kanban, badge: '3' },
-  { name: 'Orçamentos & Setup', href: '/orcamentos', icon: Calculator },
-  { name: 'Clientes & Parceiros', href: '/clientes', icon: Users },
-  { name: 'Onboarding', href: '/onboarding', icon: Rocket, badge: '1' },
+  { name: 'Funil de Vendas', href: '/pipeline', icon: Kanban, badge: '3', roles: ['ADMIN', 'MANAGER'] },
+  { name: 'Orçamentos & Setup', href: '/orcamentos', icon: Calculator, roles: ['ADMIN', 'MANAGER'] },
+  { name: 'Clientes & Parceiros', href: '/clientes', icon: Users, roles: ['ADMIN', 'MANAGER', 'OPERATOR'] },
+  { name: 'Onboarding', href: '/onboarding', icon: Rocket, badge: '1', roles: ['ADMIN', 'MANAGER', 'OPERATOR'] },
   { name: 'Projetos & Brainstorm', href: '/projetos', icon: FolderKanban },
   { name: 'Chamados / Helpdesk', href: '/chamados', icon: Headphones, badge: '2' },
   { name: 'Tarefas (To-Do)', href: '/tarefas', icon: CheckSquare },
-  { name: 'Histórico de Contatos', href: '/contatos', icon: History },
-  { name: 'Financeiro (Fluxo)', href: '/financeiro', icon: DollarSign },
-  { name: 'Serviços & Produtos', href: '/servicos', icon: Package },
-  { name: 'Configurações', href: '/configuracoes', icon: Settings },
+  { name: 'Histórico de Contatos', href: '/contatos', icon: History, roles: ['ADMIN', 'MANAGER', 'OPERATOR'] },
+  { name: 'Financeiro (Fluxo)', href: '/financeiro', icon: DollarSign, roles: ['ADMIN', 'MANAGER'] },
+  { name: 'Serviços & Produtos', href: '/servicos', icon: Package, roles: ['ADMIN', 'MANAGER', 'OPERATOR'] },
+  { name: 'Usuários & Permissões', href: '/usuarios', icon: ShieldCheck, roles: ['ADMIN'] },
+  { name: 'Configurações', href: '/configuracoes', icon: Settings, roles: ['ADMIN'] },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const { settings } = useCompany();
+  const { user, logout } = useAuth();
+
+  const menuItems = allMenuItems.filter((item) => {
+    if (!item.roles) return true;
+    if (!user) return false;
+    if (user.role === 'ADMIN') return true;
+    return item.roles.includes(user.role);
+  });
 
   return (
     <aside className="w-64 bg-white dark:bg-[#0f172a] border-r border-slate-200 dark:border-slate-800 flex flex-col h-screen sticky top-0 select-none z-30 transition-colors">
@@ -107,19 +128,45 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Footer Info / VPS Dokploy Status */}
-      <div className="p-3 border-t border-slate-200 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-900/40">
-        <div className="bg-white dark:bg-slate-800/40 rounded-lg p-2.5 border border-slate-200 dark:border-slate-700/50 shadow-xs">
-          <div className="flex items-center justify-between text-xs mb-1">
-            <span className="text-slate-500 dark:text-slate-400 text-[11px] font-medium flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              Oracle VPS Online
+      {/* Footer Info: User Info & VPS Status */}
+      <div className="p-3 border-t border-slate-200 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-900/40 space-y-2">
+        {user && (
+          <div className="bg-white dark:bg-slate-800/60 rounded-xl p-2.5 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between shadow-xs">
+            <div className="flex items-center gap-2 truncate pr-1">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white font-bold text-xs flex-shrink-0 shadow-xs">
+                {user.name.charAt(0)}
+              </div>
+              <div className="truncate">
+                <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+                  {user.name}
+                </p>
+                <span className={`inline-block text-[9px] font-bold px-1.5 py-0.2 rounded border uppercase ${ROLE_DEFINITIONS[user.role]?.badgeColor || ''}`}>
+                  {ROLE_DEFINITIONS[user.role]?.label || user.role}
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={logout}
+              title="Encerrar sessão"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors flex-shrink-0"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
+        <div className="bg-white/60 dark:bg-slate-800/30 rounded-lg p-2 border border-slate-200/70 dark:border-slate-700/40 text-[10px]">
+          <div className="flex items-center justify-between text-xs mb-0.5">
+            <span className="text-slate-500 dark:text-slate-400 text-[10px] font-medium flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              VPS Oracle
             </span>
-            <span className="text-[10px] font-mono text-cyan-700 dark:text-cyan-400 bg-cyan-100 dark:bg-cyan-950/60 px-1.5 py-0.5 rounded border border-cyan-300 dark:border-cyan-800/40">
+            <span className="text-[9px] font-mono text-cyan-700 dark:text-cyan-400 bg-cyan-100 dark:bg-cyan-950/60 px-1 py-0.2 rounded border border-cyan-300 dark:border-cyan-800/40">
               Dokploy
             </span>
           </div>
-          <p className="text-[11px] text-slate-700 dark:text-slate-300 font-mono truncate">
+          <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono truncate">
             crm.elohdigital.com.br
           </p>
         </div>

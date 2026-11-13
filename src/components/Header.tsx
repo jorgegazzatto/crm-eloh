@@ -4,7 +4,9 @@ import React from 'react';
 import Link from 'next/link';
 import { useCompany } from '@/context/CompanyContext';
 import { useTheme } from '@/context/ThemeContext';
-import { Search, Plus, Sun, Moon, Laptop, Settings } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { ROLE_DEFINITIONS } from '@/lib/types';
+import { Search, Plus, Sun, Moon, Laptop, Settings, LogOut, ShieldCheck, User } from 'lucide-react';
 
 interface HeaderProps {
   title?: string;
@@ -15,6 +17,7 @@ interface HeaderProps {
 export function Header({ title, subtitle, children }: HeaderProps) {
   const { settings } = useCompany();
   const { theme, setTheme } = useTheme();
+  const { user, logout } = useAuth();
 
   return (
     <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-[#0b0f19]/80 backdrop-blur-md sticky top-0 z-20 px-6 flex items-center justify-between transition-colors">
@@ -102,33 +105,36 @@ export function Header({ title, subtitle, children }: HeaderProps) {
           <span>Novo Orçamento</span>
         </Link>
 
-        {/* User / Company Pill */}
-        <Link
-          href="/configuracoes"
-          className="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800 hover:opacity-90 transition-opacity"
-        >
-          {settings.logoUrl ? (
-            <div className="w-8 h-8 rounded-full overflow-hidden bg-white border border-slate-200 dark:border-slate-700 flex items-center justify-center p-0.5">
-              <img
-                src={settings.logoUrl}
-                alt={settings.tradeName}
-                className="w-full h-full object-contain"
-              />
+        {/* User Session Pill & Actions */}
+        <div className="flex items-center gap-2 pl-3 border-l border-slate-200 dark:border-slate-800">
+          <Link
+            href="/configuracoes"
+            title="Ver meu perfil e configurações"
+            className="flex items-center gap-2.5 p-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
+          >
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xs ring-2 ring-slate-200 dark:ring-slate-800 flex-shrink-0">
+              {user?.name ? user.name.slice(0, 2).toUpperCase() : 'US'}
             </div>
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xs ring-2 ring-slate-200 dark:ring-slate-800">
-              {settings.tradeName?.slice(0, 2).toUpperCase() || 'EL'}
+            <div className="hidden lg:block text-left max-w-[130px] truncate">
+              <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 leading-tight truncate">
+                {user?.name || 'Usuário'}
+              </p>
+              <p className="text-[10px] text-cyan-600 dark:text-cyan-400 font-bold leading-tight truncate">
+                {user ? ROLE_DEFINITIONS[user.role]?.label || user.role : 'Conectado'}
+              </p>
             </div>
-          )}
-          <div className="hidden lg:block text-left max-w-[120px] truncate">
-            <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 leading-tight truncate">
-              {settings.tradeName || 'Elohdigital'}
-            </p>
-            <p className="text-[10px] text-cyan-600 dark:text-cyan-400 font-medium leading-tight">
-              Gestor
-            </p>
-          </div>
-        </Link>
+          </Link>
+
+          {/* Botão de Logout */}
+          <button
+            type="button"
+            onClick={logout}
+            title="Sair do sistema (Logout)"
+            className="p-2 rounded-xl text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-transparent hover:border-rose-200 dark:hover:border-rose-900/50 transition-all hover:scale-105 active:scale-95"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </header>
   );

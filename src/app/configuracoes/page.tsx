@@ -1,8 +1,11 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
+import Link from 'next/link';
 import { Header } from '@/components/Header';
 import { useCompany } from '@/context/CompanyContext';
+import { useAuth } from '@/context/AuthContext';
+import { ROLE_DEFINITIONS } from '@/lib/types';
 import {
   Building2,
   MapPin,
@@ -21,10 +24,15 @@ import {
   ChevronUp,
   FileSpreadsheet,
   ChevronsUpDown,
+  ShieldCheck,
+  Users,
+  KeyRound,
+  ArrowRight,
 } from 'lucide-react';
 
 export default function ConfiguracoesPage() {
   const { settings, updateSettings, resetSettings } = useCompany();
+  const { users, user: currentUser } = useAuth();
 
   const [formData, setFormData] = useState(settings);
   const [showSavedToast, setShowSavedToast] = useState(false);
@@ -37,6 +45,7 @@ export default function ConfiguracoesPage() {
     address: false,
     billing: false,
     notes: false,
+    users: false,
   });
 
   const toggleSection = (sectionKey: string) => {
@@ -56,6 +65,7 @@ export default function ConfiguracoesPage() {
       address: nextState,
       billing: nextState,
       notes: nextState,
+      users: nextState,
     });
   };
 
@@ -783,6 +793,103 @@ export default function ConfiguracoesPage() {
                 <p className="text-[11px] text-slate-400">
                   Estas anotações ficam salvas no sistema e podem ser utilizadas como modelo de cláusula ou referência operacional rápida.
                 </p>
+              </div>
+            )}
+          </div>
+
+          {/* CARD 6: GESTÃO DE USUÁRIOS & NÍVEIS DE ACESSO */}
+          <div className="bg-white dark:bg-[#0f172a] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden transition-colors">
+            <button
+              type="button"
+              onClick={() => toggleSection('users')}
+              className="w-full flex items-center justify-between p-5 text-left hover:bg-slate-50/80 dark:hover:bg-slate-900/40 transition-colors select-none"
+            >
+              <div className="flex items-center gap-3">
+                <span className="p-2.5 rounded-xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex-shrink-0">
+                  <ShieldCheck className="w-5 h-5" />
+                </span>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                    6. Gestão de Usuários & Níveis de Acesso
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {users.length} usuário(s) cadastrado(s) • Critério de acesso por e-mail e senha
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hidden sm:inline-block">
+                  {openSections.users ? 'Aberto' : 'Fechado'}
+                </span>
+                <span
+                  className={`p-1.5 rounded-lg text-slate-400 transition-transform duration-200 ${
+                    openSections.users ? 'rotate-180 text-cyan-500' : ''
+                  }`}
+                >
+                  <ChevronDown className="w-4 h-4" />
+                </span>
+              </div>
+            </button>
+
+            {/* Conteúdo Expansível (Sanfona) */}
+            {openSections.users && (
+              <div className="p-6 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/30 dark:bg-slate-900/20 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      Controle Centralizado de Usuários e Permissões
+                    </h4>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      O administrador tem o controle para cadastrar, alterar senhas, definir perfis e bloquear acessos.
+                    </p>
+                  </div>
+                  <Link
+                    href="/usuarios"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white text-xs font-bold shadow-md shadow-cyan-500/10 transition-all hover:scale-105 active:scale-95 flex-shrink-0"
+                  >
+                    <span>Abrir Central de Usuários</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+
+                {/* Lista Resumida dos Usuários */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {users.map((u) => {
+                    const rDef = ROLE_DEFINITIONS[u.role] || { label: u.role, badgeColor: '' };
+                    return (
+                      <div
+                        key={u.id}
+                        className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs"
+                      >
+                        <div className="flex items-center gap-2.5 truncate pr-2">
+                          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-cyan-500 to-blue-600 text-white font-bold text-xs flex items-center justify-center flex-shrink-0">
+                            {u.name.charAt(0)}
+                          </div>
+                          <div className="truncate">
+                            <p className="font-bold text-slate-900 dark:text-white truncate">
+                              {u.name}
+                            </p>
+                            <p className="text-[10px] text-slate-400 font-mono truncate">
+                              {u.email}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className={`text-[9px] font-bold px-2 py-0.5 rounded border uppercase ${rDef.badgeColor}`}>
+                            {rDef.label}
+                          </span>
+                          <span
+                            className={`w-2 h-2 rounded-full ${
+                              u.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-rose-500'
+                            }`}
+                            title={u.status === 'ACTIVE' ? 'Ativo' : 'Inativo'}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>
