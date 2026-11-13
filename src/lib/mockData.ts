@@ -319,8 +319,16 @@ export const initialProjects: Project[] = [
     targetEndDate: '2026-03-25',
     budget: 4500.0,
     brainstormNotes: 'Inspirações: sites minimalistas escuros, tipografia forte, destaque para portfólio de obras com fotos em alta e calculadora simplificada de orçamento de projetos.',
-    partnersInvolved: 'Felipe Ramos (Front-end), Equipe Elohdigital (Copy e Arquitetura).',
-    progressPercent: 35,
+    partnersInvolved: 'Felipe Ramos (Dev Frontend / React)',
+    partnerIds: ['sup-1'],
+    stages: [
+      { id: 'stg-1-1', title: 'Briefing e Levantamento de Requisitos', completed: true },
+      { id: 'stg-1-2', title: 'Wireframes e Aprovação de Layout UI/UX', completed: true },
+      { id: 'stg-1-3', title: 'Desenvolvimento Frontend Next.js + Tailwind', completed: false },
+      { id: 'stg-1-4', title: 'Testes de Responsividade e Formulários', completed: false },
+      { id: 'stg-1-5', title: 'Deploy de Produção no Dokploy', completed: false },
+    ],
+    progressPercent: 40,
   },
   {
     id: 'proj-2',
@@ -333,8 +341,15 @@ export const initialProjects: Project[] = [
     targetEndDate: '2026-04-10',
     budget: 8500.0,
     brainstormNotes: 'Criar visão preditiva de estoque mínimo. Integrar o ERP antigo via script Python/Postgres com atualização a cada 2 horas.',
-    partnersInvolved: 'Equipe Interna Elohdigital',
-    progressPercent: 70,
+    partnersInvolved: 'Servidor VPS Oracle / Dokploy Host',
+    partnerIds: ['sup-2'],
+    stages: [
+      { id: 'stg-2-1', title: 'Mapeamento das tabelas do banco legado', completed: true },
+      { id: 'stg-2-2', title: 'Criação dos pipelines de ETL automatizados', completed: true },
+      { id: 'stg-2-3', title: 'Modelagem dos dashboards executivos de estoque', completed: true },
+      { id: 'stg-2-4', title: 'Validação de consistência com os diretores', completed: false },
+    ],
+    progressPercent: 75,
   },
 ];
 

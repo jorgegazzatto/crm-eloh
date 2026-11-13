@@ -2,205 +2,685 @@
 
 import React, { useState } from 'react';
 import { Header } from '@/components/Header';
-import { initialProjects, initialClients } from '@/lib/mockData';
-import { Project } from '@/lib/types';
-import { FolderKanban, Plus, Users, Lightbulb, Calendar, CheckSquare, Sparkles } from 'lucide-react';
+import { initialProjects, initialClients, initialSuppliers } from '@/lib/mockData';
+import { Project, ProjectStage, Supplier } from '@/lib/types';
+import {
+  FolderKanban,
+  Plus,
+  Users,
+  Lightbulb,
+  Calendar,
+  CheckSquare,
+  Square,
+  Sparkles,
+  Trash2,
+  CheckCircle2,
+  Clock,
+  Layers,
+  ChevronRight,
+  ArrowRight,
+  UserCheck,
+} from 'lucide-react';
 
 export default function ProjetosPage() {
   const [projects, setProjects] = useState<Project[]>(initialProjects);
   const [showModal, setShowModal] = useState(false);
 
-  // New Project Form
+  // New Project Form States
   const [name, setName] = useState('');
-  const [clientId, setClientId] = useState(initialClients[0].id);
+  const [clientId, setClientId] = useState(initialClients[0]?.id || '');
   const [serviceType, setServiceType] = useState('DATA_BI');
-  const [budget, setBudget] = useState(4000);
+  const [budget, setBudget] = useState(4500);
   const [brainstormNotes, setBrainstormNotes] = useState('');
-  const [partnersInvolved, setPartnersInvolved] = useState('');
-  const [targetEndDate, setTargetEndDate] = useState('');
+  
+  // Datas com Calendário
+  const todayStr = new Date().toISOString().split('T')[0];
+  const defaultEndStr = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const [startDate, setStartDate] = useState(todayStr);
+  const [targetEndDate, setTargetEndDate] = useState(defaultEndStr);
+
+  // Parceiros Selecionados (dos cadastrados)
+  const [selectedPartnerIds, setSelectedPartnerIds] = useState<string[]>([]);
+  const [customPartnerText, setCustomPartnerText] = useState('');
+
+  // Etapas a serem cumpridas
+  const [stages, setStages] = useState<{ id: string; title: string; completed: boolean }[]>([
+    { id: 'stg-1', title: 'Briefing e Levantamento de Requisitos', completed: false },
+    { id: 'stg-2', title: 'Setup de Ambiente e Arquitetura', completed: false },
+    { id: 'stg-3', title: 'Desenvolvimento e Configurações', completed: false },
+    { id: 'stg-4', title: 'Homologação e Validação Final', completed: false },
+  ]);
+  const [newStageTitle, setNewStageTitle] = useState('');
+
+  // Sugestões rápidas de etapas
+  const suggestedStages = [
+    'Kick-off & Alinhamento',
+    'Wireframes & UI/UX',
+    'Pipeline ETL & Conexão Banco',
+    'Configuração de Campanhas',
+    'Testes de Carga & Validação',
+    'Treinamento da Equipe',
+  ];
+
+  const handleAddStage = () => {
+    if (!newStageTitle.trim()) return;
+    setStages([
+      ...stages,
+      {
+        id: `stg-${Date.now()}`,
+        title: newStageTitle.trim(),
+        completed: false,
+      },
+    ]);
+    setNewStageTitle('');
+  };
+
+  const handleAddSuggestedStage = (title: string) => {
+    if (stages.some((s) => s.title === title)) return;
+    setStages([
+      ...stages,
+      {
+        id: `stg-${Date.now()}-${Math.random()}`,
+        title,
+        completed: false,
+      },
+    ]);
+  };
+
+  const handleRemoveStage = (id: string) => {
+    setStages(stages.filter((s) => s.id !== id));
+  };
+
+  const handleTogglePartner = (partnerId: string) => {
+    if (selectedPartnerIds.includes(partnerId)) {
+      setSelectedPartnerIds(selectedPartnerIds.filter((id) => id !== partnerId));
+    } else {
+      setSelectedPartnerIds([...selectedPartnerIds, partnerId]);
+    }
+  };
 
   const handleCreateProject = (e: React.FormEvent) => {
     e.preventDefault();
     const client = initialClients.find((c) => c.id === clientId);
+
+    // Nomes dos parceiros selecionados
+    const chosenPartners = initialSuppliers
+      .filter((s) => selectedPartnerIds.includes(s.id))
+      .map((s) => s.name);
+
+    if (customPartnerText.trim()) {
+      chosenPartners.push(customPartnerText.trim());
+    }
+
+    // Cálculo inicial de progresso baseado nas etapas marcadas
+    const completedCount = stages.filter((s) => s.completed).length;
+    const initialProgress = stages.length > 0 ? Math.round((completedCount / stages.length) * 100) : 0;
+
     const newProj: Project = {
       id: `proj-${Date.now()}`,
       name,
-      status: 'PLANNING',
+      status: initialProgress === 100 ? 'COMPLETED' : 'IN_PROGRESS',
       serviceType,
       clientId,
       clientName: client ? client.tradeName : 'Cliente',
-      startDate: new Date().toISOString().split('T')[0],
-      targetEndDate: targetEndDate || new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+      startDate: startDate || todayStr,
+      targetEndDate: targetEndDate || defaultEndStr,
       budget,
       brainstormNotes,
-      partnersInvolved,
-      progressPercent: 10,
+      partnerIds: selectedPartnerIds,
+      partnersInvolved: chosenPartners.join(', ') || 'Equipe Interna Elohdigital',
+      stages: stages,
+      progressPercent: initialProgress,
     };
+
     setProjects([newProj, ...projects]);
     setShowModal(false);
+
+    // Reset form
+    setName('');
+    setBrainstormNotes('');
+    setSelectedPartnerIds([]);
+    setCustomPartnerText('');
+    setStages([
+      { id: 'stg-1', title: 'Briefing e Levantamento de Requisitos', completed: false },
+      { id: 'stg-2', title: 'Setup de Ambiente e Arquitetura', completed: false },
+      { id: 'stg-3', title: 'Desenvolvimento e Configurações', completed: false },
+      { id: 'stg-4', title: 'Homologação e Validação Final', completed: false },
+    ]);
+  };
+
+  // Alternar conclusão de etapa de um projeto existente e recalcular progresso
+  const handleToggleProjectStage = (projectId: string, stageId: string) => {
+    setProjects((prevProjects) =>
+      prevProjects.map((proj) => {
+        if (proj.id !== projectId) return proj;
+
+        const currentStages = proj.stages || [];
+        const updatedStages = currentStages.map((stg) =>
+          stg.id === stageId ? { ...stg, completed: !stg.completed } : stg
+        );
+
+        const total = updatedStages.length;
+        const completed = updatedStages.filter((s) => s.completed).length;
+        const newProgress = total > 0 ? Math.round((completed / total) * 100) : proj.progressPercent;
+
+        let newStatus = proj.status;
+        if (newProgress === 100) newStatus = 'COMPLETED';
+        else if (newProgress > 0 && proj.status === 'PLANNING') newStatus = 'IN_PROGRESS';
+
+        return {
+          ...proj,
+          stages: updatedStages,
+          progressPercent: newProgress,
+          status: newStatus,
+        };
+      })
+    );
+  };
+
+  // Helper para calcular dias restantes
+  const getDaysRemaining = (endDateStr: string) => {
+    try {
+      const end = new Date(endDateStr);
+      const now = new Date();
+      const diffTime = end.getTime() - now.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays;
+    } catch {
+      return null;
+    }
   };
 
   return (
-    <>
+    <div className="flex-1 flex flex-col min-h-screen bg-slate-50 dark:bg-[#0b0f19] text-slate-800 dark:text-slate-100 transition-colors">
       <Header
         title="Gestão de Projetos & Brainstorming"
-        subtitle="Controle de entregas, notas de concepção, parceiros alocados e marcos contratuais"
+        subtitle="Acompanhe entregas, etapas com checklist de progresso automático, equipe alocada e prazos"
       >
         <button
           onClick={() => setShowModal(true)}
-          className="flex items-center gap-1.5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-all"
+          className="flex items-center gap-1.5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white text-xs font-semibold px-3.5 py-2 rounded-lg shadow-md shadow-cyan-500/10 transition-all hover:scale-105 active:scale-95"
         >
           <Plus className="w-3.5 h-3.5" />
           <span>Novo Projeto</span>
         </button>
       </Header>
 
-      <div className="p-6 space-y-6 max-w-7xl mx-auto w-full">
+      <div className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto w-full">
+        {/* Grid de Projetos */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {projects.map((proj) => (
-            <div
-              key={proj.id}
-              className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition-all flex flex-col justify-between space-y-4"
-            >
-              <div>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800/40 uppercase tracking-wider">
-                      {proj.serviceType}
+          {projects.map((proj) => {
+            const daysLeft = getDaysRemaining(proj.targetEndDate);
+            const totalStages = proj.stages?.length || 0;
+            const completedStages = proj.stages?.filter((s) => s.completed).length || 0;
+
+            return (
+              <div
+                key={proj.id}
+                className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 transition-all flex flex-col justify-between space-y-5"
+              >
+                <div className="space-y-4">
+                  {/* Cabeçalho do Card */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-100 dark:bg-cyan-950 text-cyan-700 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-800/40 uppercase tracking-wider">
+                          {proj.serviceType}
+                        </span>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${
+                            proj.status === 'COMPLETED'
+                              ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800/40'
+                              : 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800/40'
+                          }`}
+                        >
+                          {proj.status === 'COMPLETED' ? 'Concluído' : proj.status === 'IN_PROGRESS' ? 'Em Andamento' : proj.status}
+                        </span>
+                      </div>
+                      <h3 className="font-bold text-base text-slate-900 dark:text-white mt-1.5">
+                        {proj.name}
+                      </h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        Cliente: <strong className="text-slate-700 dark:text-slate-200">{proj.clientName}</strong>
+                      </p>
+                    </div>
+
+                    <div className="text-right">
+                      <span className="text-[10px] text-slate-400 block uppercase">Orçamento</span>
+                      <span className="text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                        R$ {proj.budget.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Barra de Progresso com Atualização Automática */}
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex justify-between text-xs font-semibold">
+                      <span className="text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
+                        <span>Progresso da Entrega:</span>
+                        {totalStages > 0 && (
+                          <span className="text-[11px] font-normal text-slate-400">
+                            ({completedStages} de {totalStages} etapas)
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-cyan-600 dark:text-cyan-400 font-bold font-mono">
+                        {proj.progressPercent}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-100 dark:bg-slate-950 h-2.5 rounded-full overflow-hidden border border-slate-200 dark:border-slate-800">
+                      <div
+                        className="bg-gradient-to-r from-blue-500 to-cyan-400 h-full rounded-full transition-all duration-500"
+                        style={{ width: `${proj.progressPercent}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Etapas / Checklist de Entregas com Caixa de Check */}
+                  {proj.stages && proj.stages.length > 0 && (
+                    <div className="p-3.5 bg-slate-50 dark:bg-slate-950/70 rounded-xl border border-slate-200 dark:border-slate-800/80 space-y-2">
+                      <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
+                        <span className="flex items-center gap-1.5 text-cyan-600 dark:text-cyan-400">
+                          <CheckSquare className="w-4 h-4" />
+                          Etapas do Projeto (Marque para avançar o progresso):
+                        </span>
+                      </div>
+
+                      <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                        {proj.stages.map((stg) => (
+                          <button
+                            key={stg.id}
+                            type="button"
+                            onClick={() => handleToggleProjectStage(proj.id, stg.id)}
+                            className={`w-full flex items-start gap-2.5 p-2 rounded-lg text-left text-xs transition-all ${
+                              stg.completed
+                                ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-800 dark:text-emerald-300 line-through'
+                                : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 border border-slate-200 dark:border-slate-800'
+                            }`}
+                          >
+                            <span className="mt-0.5 flex-shrink-0">
+                              {stg.completed ? (
+                                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                              ) : (
+                                <Square className="w-4 h-4 text-slate-400" />
+                              )}
+                            </span>
+                            <span className="flex-1 font-medium">{stg.title}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Área de Brainstorming & Ideias */}
+                  {proj.brainstormNotes && (
+                    <div className="p-3 bg-slate-50 dark:bg-slate-950/70 rounded-xl border border-slate-200 dark:border-slate-800/80 space-y-1">
+                      <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-300 text-xs font-semibold">
+                        <Lightbulb className="w-3.5 h-3.5" />
+                        <span>Brainstorming & Notas Técnicas:</span>
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                        {proj.brainstormNotes}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Parceiros Envolvidos */}
+                  {proj.partnersInvolved && (
+                    <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 pt-1">
+                      <Users className="w-4 h-4 text-cyan-500 flex-shrink-0" />
+                      <span className="truncate">
+                        <strong className="text-slate-800 dark:text-slate-200">Parceiros / Freelancers:</strong>{' '}
+                        {proj.partnersInvolved}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Rodapé com Datas de Início e Entrega (Calendário) */}
+                <div className="pt-3 border-t border-slate-200 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
+                  <div className="flex items-center gap-3">
+                    <span className="flex items-center gap-1">
+                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Início: {new Date(proj.startDate).toLocaleDateString('pt-BR')}</span>
                     </span>
-                    <h3 className="font-bold text-base text-white mt-1.5">{proj.name}</h3>
-                    <p className="text-xs text-slate-400">Cliente: {proj.clientName}</p>
+                    <span className="flex items-center gap-1 font-semibold text-slate-700 dark:text-slate-200">
+                      <Clock className="w-3.5 h-3.5 text-cyan-500" />
+                      <span>Entrega: {new Date(proj.targetEndDate).toLocaleDateString('pt-BR')}</span>
+                    </span>
                   </div>
-                  <span className="text-xs font-mono font-bold text-emerald-400">
-                    R$ {proj.budget.toLocaleString('pt-BR')}
-                  </span>
-                </div>
 
-                {/* Progresso */}
-                <div className="mt-4 space-y-1.5">
-                  <div className="flex justify-between text-xs text-slate-400">
-                    <span>Progresso da Entrega</span>
-                    <span className="text-cyan-400 font-bold">{proj.progressPercent}%</span>
-                  </div>
-                  <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden">
-                    <div
-                      className="bg-gradient-to-r from-blue-500 to-cyan-400 h-full rounded-full"
-                      style={{ width: `${proj.progressPercent}%` }}
-                    />
-                  </div>
+                  {daysLeft !== null && (
+                    <span
+                      className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
+                        daysLeft < 0
+                          ? 'bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300'
+                          : daysLeft <= 5
+                          ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                      }`}
+                    >
+                      {daysLeft < 0 ? `Atrasado ${Math.abs(daysLeft)}d` : `${daysLeft} dias restantes`}
+                    </span>
+                  )}
                 </div>
-
-                {/* Área de Brainstorming & Ideias */}
-                <div className="mt-4 p-3 bg-slate-950/80 rounded-xl border border-slate-800/80 space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-amber-300 text-xs font-semibold">
-                    <Lightbulb className="w-3.5 h-3.5" />
-                    <span>Brainstorm & Notas Técnicas:</span>
-                  </div>
-                  <p className="text-xs text-slate-300 leading-relaxed">
-                    {proj.brainstormNotes || 'Nenhuma anotação de brainstorm cadastrada.'}
-                  </p>
-                </div>
-
-                {/* Parceiros / Equipe Envolvida */}
-                {proj.partnersInvolved && (
-                  <div className="mt-3 flex items-center gap-2 text-xs text-slate-400">
-                    <Users className="w-3.5 h-3.5 text-cyan-400" />
-                    <span><strong className="text-slate-200">Parceiros:</strong> {proj.partnersInvolved}</span>
-                  </div>
-                )}
               </div>
-
-              <div className="pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-500">
-                <span className="flex items-center gap-1">
-                  <Calendar className="w-3.5 h-3.5" />
-                  Entrega: {new Date(proj.targetEndDate).toLocaleDateString('pt-BR')}
-                </span>
-                <span className="text-cyan-400 font-medium">{proj.status}</span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
-        {/* Modal Novo Projeto */}
+        {/* MODAL: CRIAR NOVO PROJETO */}
         {showModal && (
-          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                <h3 className="font-bold text-sm text-white">Criar Novo Projeto</h3>
-                <button onClick={() => setShowModal(false)} className="text-slate-400 text-sm">✕</button>
+          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+            <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-2xl p-6 space-y-5 shadow-2xl my-8">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="p-2 rounded-lg bg-cyan-500/10 text-cyan-600 dark:text-cyan-400">
+                    <FolderKanban className="w-5 h-5" />
+                  </span>
+                  <div>
+                    <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                      Criar Novo Projeto
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Cadastre escopo, equipe parceira, etapas e cronograma com calendário
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-white text-lg px-2"
+                >
+                  ✕
+                </button>
               </div>
 
-              <form onSubmit={handleCreateProject} className="space-y-3">
+              <form onSubmit={handleCreateProject} className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
+                {/* 1. Nome & Cliente */}
                 <div>
-                  <label className="text-xs font-semibold text-slate-300 block mb-1">Nome do Projeto</label>
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                    Nome do Projeto *
+                  </label>
                   <input
                     type="text"
                     placeholder="Ex: Implantação ETL & Relatórios de Vendas"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-cyan-500"
                     required
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="text-xs font-semibold text-slate-300 block mb-1">Cliente</label>
+                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                      Cliente *
+                    </label>
                     <select
                       value={clientId}
                       onChange={(e) => setClientId(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white"
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-cyan-500"
                     >
                       {initialClients.map((c) => (
-                        <option key={c.id} value={c.id}>{c.tradeName}</option>
+                        <option key={c.id} value={c.id}>
+                          {c.tradeName}
+                        </option>
                       ))}
                     </select>
                   </div>
+
                   <div>
-                    <label className="text-xs font-semibold text-slate-300 block mb-1">Orçamento (R$)</label>
+                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                      Tipo de Serviço
+                    </label>
+                    <select
+                      value={serviceType}
+                      onChange={(e) => setServiceType(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-cyan-500"
+                    >
+                      <option value="DATA_BI">BI & Dados</option>
+                      <option value="AUTOMATION">Automação & Apps</option>
+                      <option value="WEB_DEV">Desenvolvimento Web</option>
+                      <option value="PAID_TRAFFIC">Tráfego Pago</option>
+                      <option value="CONSULTING">Consultoria</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                      Orçamento (R$)
+                    </label>
                     <input
                       type="number"
                       value={budget}
                       onChange={(e) => setBudget(Number(e.target.value))}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white"
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-cyan-500 font-mono"
                       required
                     />
                   </div>
                 </div>
 
-                <div>
-                  <label className="text-xs font-semibold text-slate-300 block mb-1">Parceiros Envolvidos / Freelancers</label>
-                  <input
-                    type="text"
-                    placeholder="Ex: Felipe Ramos (Front), Matheus (Tráfego)"
-                    value={partnersInvolved}
-                    onChange={(e) => setPartnersInvolved(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white"
-                  />
+                {/* 2. DATAS COM SELETOR DE CALENDÁRIO (INÍCIO E ENTREGA) */}
+                <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300">
+                    <Calendar className="w-4 h-4 text-cyan-500" />
+                    <span>Cronograma do Projeto (Calendário)</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div>
+                      <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-1">
+                        Data de Início (Calendário) *
+                      </label>
+                      <input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-cyan-500"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-1">
+                        Data Prevista de Entrega (Calendário) *
+                      </label>
+                      <input
+                        type="date"
+                        value={targetEndDate}
+                        onChange={(e) => setTargetEndDate(e.target.value)}
+                        className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-cyan-500"
+                        required
+                      />
+                    </div>
+                  </div>
                 </div>
 
+                {/* 3. PARCEIROS ENVOLVIDOS / FREELANCERS (SELEÇÃO DOS CADASTRADOS) */}
+                <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2.5">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
+                    <span className="flex items-center gap-1.5">
+                      <Users className="w-4 h-4 text-cyan-500" />
+                      Parceiros Envolvidos & Freelancers (Selecione os cadastrados):
+                    </span>
+                    <span className="text-[11px] font-normal text-slate-400">
+                      {selectedPartnerIds.length} selecionado(s)
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-36 overflow-y-auto pr-1">
+                    {initialSuppliers.map((supp) => {
+                      const isSelected = selectedPartnerIds.includes(supp.id);
+                      return (
+                        <button
+                          key={supp.id}
+                          type="button"
+                          onClick={() => handleTogglePartner(supp.id)}
+                          className={`flex items-center justify-between p-2 rounded-lg text-left text-xs transition-all border ${
+                            isSelected
+                              ? 'bg-cyan-50 dark:bg-cyan-950/40 border-cyan-500 text-cyan-800 dark:text-cyan-200 shadow-xs'
+                              : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-700'
+                          }`}
+                        >
+                          <div className="truncate pr-2">
+                            <p className="font-semibold truncate">{supp.name}</p>
+                            <p className="text-[10px] text-slate-400">
+                              {supp.category} {supp.hourlyRate ? `• R$ ${supp.hourlyRate}/h` : ''}
+                            </p>
+                          </div>
+                          <span className="flex-shrink-0">
+                            {isSelected ? (
+                              <CheckCircle2 className="w-4 h-4 text-cyan-500" />
+                            ) : (
+                              <Square className="w-4 h-4 text-slate-400" />
+                            )}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-medium text-slate-500 dark:text-slate-400 block mb-1">
+                      Ou informe parceiro pontual complementar:
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Designer Externo, Copywriter convidado..."
+                      value={customPartnerText}
+                      onChange={(e) => setCustomPartnerText(e.target.value)}
+                      className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-cyan-500"
+                    />
+                  </div>
+                </div>
+
+                {/* 4. ETAPAS A SEREM CUMPRIDAS (CHECKLIST COM AVANÇO AUTOMÁTICO DE PROGRESSO) */}
+                <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
+                    <span className="flex items-center gap-1.5">
+                      <CheckSquare className="w-4 h-4 text-cyan-500" />
+                      Etapas a serem cumpridas (Avançam o progresso ao marcar check):
+                    </span>
+                    <span className="text-[11px] font-semibold text-cyan-600 dark:text-cyan-400">
+                      {stages.length} etapas cadastradas
+                    </span>
+                  </div>
+
+                  {/* Sugestões rápidas para adicionar */}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[10px] text-slate-400 font-medium">Sugestões rápidas:</span>
+                    {suggestedStages.map((sug) => (
+                      <button
+                        key={sug}
+                        type="button"
+                        onClick={() => handleAddSuggestedStage(sug)}
+                        className="text-[10px] bg-white dark:bg-slate-950 hover:bg-cyan-50 dark:hover:bg-cyan-950 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-800 transition-colors"
+                      >
+                        + {sug}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Campo de Inserir Nova Etapa */}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Digitar nova etapa do projeto..."
+                      value={newStageTitle}
+                      onChange={(e) => setNewStageTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddStage();
+                        }
+                      }}
+                      className="flex-1 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-cyan-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddStage}
+                      className="px-3 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-colors"
+                    >
+                      + Adicionar
+                    </button>
+                  </div>
+
+                  {/* Lista de Etapas com Checkbox inicial */}
+                  <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                    {stages.map((stg, index) => (
+                      <div
+                        key={stg.id}
+                        className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setStages(
+                              stages.map((s) =>
+                                s.id === stg.id ? { ...s, completed: !s.completed } : s
+                              )
+                            );
+                          }}
+                          className="flex items-center gap-2 text-left flex-1"
+                        >
+                          <span className="text-cyan-500">
+                            {stg.completed ? (
+                              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                            ) : (
+                              <Square className="w-4 h-4 text-slate-400" />
+                            )}
+                          </span>
+                          <span
+                            className={`font-medium ${
+                              stg.completed
+                                ? 'line-through text-slate-400 dark:text-slate-500'
+                                : 'text-slate-700 dark:text-slate-200'
+                            }`}
+                          >
+                            {index + 1}. {stg.title}
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveStage(stg.id)}
+                          className="text-slate-400 hover:text-rose-500 p-1 transition-colors"
+                          title="Remover etapa"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 5. Brainstorming & Anotações */}
                 <div>
-                  <label className="text-xs font-semibold text-slate-300 block mb-1">Área de Brainstorming & Ideias</label>
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                    Área de Brainstorming & Ideias Técnicas
+                  </label>
                   <textarea
                     rows={3}
                     placeholder="Inspirações, referências visuais, arquitetura planejada, requisitos..."
                     value={brainstormNotes}
                     onChange={(e) => setBrainstormNotes(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-cyan-500 leading-relaxed"
                   />
                 </div>
 
-                <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+                {/* Botões do Modal */}
+                <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
                   <button
                     type="button"
                     onClick={() => setShowModal(false)}
-                    className="px-3 py-1.5 bg-slate-800 text-slate-300 text-xs rounded-lg"
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold rounded-xl transition-colors"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold rounded-lg"
+                    className="px-6 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-cyan-500/20 transition-all hover:scale-105 active:scale-95"
                   >
                     Salvar Projeto
                   </button>
@@ -210,6 +690,6 @@ export default function ProjetosPage() {
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }

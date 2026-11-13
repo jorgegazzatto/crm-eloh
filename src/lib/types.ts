@@ -102,6 +102,13 @@ export interface OnboardingStep {
   clientName: string;
 }
 
+export interface ProjectStage {
+  id: string;
+  title: string;
+  completed: boolean;
+  dueDate?: string;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -114,6 +121,8 @@ export interface Project {
   budget: number;
   brainstormNotes: string;
   partnersInvolved: string;
+  partnerIds?: string[];
+  stages?: ProjectStage[];
   progressPercent: number;
 }
 
