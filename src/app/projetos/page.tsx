@@ -20,6 +20,9 @@ import {
   ChevronRight,
   ArrowRight,
   UserCheck,
+  X,
+  Search,
+  UserPlus,
 } from 'lucide-react';
 
 export default function ProjetosPage() {
@@ -42,6 +45,8 @@ export default function ProjetosPage() {
   // Parceiros Selecionados (dos cadastrados)
   const [selectedPartnerIds, setSelectedPartnerIds] = useState<string[]>([]);
   const [customPartnerText, setCustomPartnerText] = useState('');
+  const [showPartnerModal, setShowPartnerModal] = useState(false);
+  const [partnerSearchQuery, setPartnerSearchQuery] = useState('');
 
   // Etapas a serem cumpridas
   const [stages, setStages] = useState<{ id: string; title: string; completed: boolean }[]>([
@@ -497,49 +502,70 @@ export default function ProjetosPage() {
                   </div>
                 </div>
 
-                {/* 3. PARCEIROS ENVOLVIDOS / FREELANCERS (SELEÇÃO DOS CADASTRADOS) */}
-                <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2.5">
+                {/* 3. PARCEIROS ENVOLVIDOS / FREELANCERS (EXIBE SOMENTE OS ESCOLHIDOS + CAIXA FLUTUANTE) */}
+                <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3">
                   <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
                     <span className="flex items-center gap-1.5">
                       <Users className="w-4 h-4 text-cyan-500" />
-                      Parceiros Envolvidos & Freelancers (Selecione os cadastrados):
+                      Parceiros Envolvidos & Freelancers:
                     </span>
-                    <span className="text-[11px] font-normal text-slate-400">
-                      {selectedPartnerIds.length} selecionado(s)
-                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowPartnerModal(true)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold shadow-xs transition-all hover:scale-105 active:scale-95"
+                    >
+                      <UserPlus className="w-3.5 h-3.5" />
+                      <span>{selectedPartnerIds.length > 0 ? 'Gerenciar Parceiros' : '+ Escolher Parceiros'}</span>
+                    </button>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-36 overflow-y-auto pr-1">
-                    {initialSuppliers.map((supp) => {
-                      const isSelected = selectedPartnerIds.includes(supp.id);
-                      return (
-                        <button
-                          key={supp.id}
-                          type="button"
-                          onClick={() => handleTogglePartner(supp.id)}
-                          className={`flex items-center justify-between p-2 rounded-lg text-left text-xs transition-all border ${
-                            isSelected
-                              ? 'bg-cyan-50 dark:bg-cyan-950/40 border-cyan-500 text-cyan-800 dark:text-cyan-200 shadow-xs'
-                              : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-700'
-                          }`}
-                        >
-                          <div className="truncate pr-2">
-                            <p className="font-semibold truncate">{supp.name}</p>
-                            <p className="text-[10px] text-slate-400">
-                              {supp.category} {supp.hourlyRate ? `• R$ ${supp.hourlyRate}/h` : ''}
-                            </p>
+                  {/* Exibição SOMENTE DOS ESCOLHIDOS */}
+                  {selectedPartnerIds.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {initialSuppliers
+                        .filter((supp) => selectedPartnerIds.includes(supp.id))
+                        .map((supp) => (
+                          <div
+                            key={supp.id}
+                            className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-slate-950 border border-cyan-500/50 shadow-xs"
+                          >
+                            <div className="flex items-center gap-2.5 truncate pr-1">
+                              <div className="w-7 h-7 rounded-lg bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                                {supp.name.charAt(0)}
+                              </div>
+                              <div className="truncate">
+                                <p className="font-semibold text-xs text-slate-800 dark:text-slate-100 truncate">
+                                  {supp.name}
+                                </p>
+                                <p className="text-[10px] text-slate-400">
+                                  {supp.category} {supp.hourlyRate ? `• R$ ${supp.hourlyRate}/h` : ''}
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleTogglePartner(supp.id)}
+                              className="p-1 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ml-1"
+                              title="Remover parceiro"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
                           </div>
-                          <span className="flex-shrink-0">
-                            {isSelected ? (
-                              <CheckCircle2 className="w-4 h-4 text-cyan-500" />
-                            ) : (
-                              <Square className="w-4 h-4 text-slate-400" />
-                            )}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
+                        ))}
+                    </div>
+                  ) : (
+                    <div
+                      onClick={() => setShowPartnerModal(true)}
+                      className="p-4 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-white/60 dark:bg-slate-950/40 cursor-pointer hover:border-cyan-500/50 transition-colors"
+                    >
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        Nenhum parceiro cadastrado selecionado ainda.
+                      </p>
+                      <span className="text-xs font-semibold text-cyan-600 dark:text-cyan-400 mt-1 inline-block">
+                        Clique aqui para abrir a caixa de múltipla escolha
+                      </span>
+                    </div>
+                  )}
 
                   <div>
                     <label className="text-[11px] font-medium text-slate-500 dark:text-slate-400 block mb-1">
@@ -686,6 +712,108 @@ export default function ProjetosPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* CAIXA FLUTUANTE PARA MÚLTIPLA ESCOLHA DE PARCEIROS */}
+        {showPartnerModal && (
+          <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-lg p-5 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="p-2 rounded-lg bg-cyan-500/10 text-cyan-600 dark:text-cyan-400">
+                    <Users className="w-4 h-4" />
+                  </span>
+                  <div>
+                    <h4 className="font-bold text-sm text-slate-900 dark:text-white">
+                      Selecionar Parceiros Cadastrados
+                    </h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Marque os profissionais de acordo com os cadastrados no sistema
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowPartnerModal(false)}
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-white text-base p-1"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Busca rápida */}
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Filtrar parceiros por nome ou categoria..."
+                  value={partnerSearchQuery}
+                  onChange={(e) => setPartnerSearchQuery(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-cyan-500"
+                />
+              </div>
+
+              {/* Lista com checkboxes para múltipla escolha */}
+              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                {initialSuppliers
+                  .filter(
+                    (supp) =>
+                      supp.name.toLowerCase().includes(partnerSearchQuery.toLowerCase()) ||
+                      supp.category.toLowerCase().includes(partnerSearchQuery.toLowerCase())
+                  )
+                  .map((supp) => {
+                    const isSelected = selectedPartnerIds.includes(supp.id);
+                    return (
+                      <button
+                        key={supp.id}
+                        type="button"
+                        onClick={() => handleTogglePartner(supp.id)}
+                        className={`w-full flex items-center justify-between p-3 rounded-xl text-left text-xs transition-all border ${
+                          isSelected
+                            ? 'bg-cyan-50/80 dark:bg-cyan-950/40 border-cyan-500 text-cyan-900 dark:text-cyan-100 shadow-xs'
+                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-700'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 truncate pr-2">
+                          <span className="mt-0.5 flex-shrink-0">
+                            {isSelected ? (
+                              <CheckCircle2 className="w-4 h-4 text-cyan-500" />
+                            ) : (
+                              <Square className="w-4 h-4 text-slate-400" />
+                            )}
+                          </span>
+                          <div className="truncate">
+                            <p className="font-bold text-xs truncate">{supp.name}</p>
+                            <p className="text-[11px] text-slate-400">
+                              {supp.category} {supp.hourlyRate ? `• R$ ${supp.hourlyRate}/h` : ''}
+                            </p>
+                          </div>
+                        </div>
+                        {supp.pixKey && (
+                          <span className="text-[10px] font-mono text-slate-400 hidden sm:inline-block">
+                            PIX cadastrado
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+              </div>
+
+              {/* Rodapé da caixa flutuante */}
+              <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800 text-xs">
+                <span className="text-slate-500 dark:text-slate-400 font-semibold">
+                  {selectedPartnerIds.length} selecionado(s)
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowPartnerModal(false)}
+                  className="px-5 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-bold rounded-xl shadow-md transition-all hover:scale-105 active:scale-95"
+                >
+                  Concluir Seleção
+                </button>
+              </div>
             </div>
           </div>
         )}
