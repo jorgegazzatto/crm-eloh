@@ -88,6 +88,24 @@ export interface ServiceItem {
   description: string;
 }
 
+export interface ProposalTeamMember {
+  id: string;
+  supplierId: string;
+  name: string;
+  category: string;
+  billingType: 'HOURLY' | 'FIXED';
+  hours: number;
+  rate: number;
+  total: number;
+}
+
+export interface ProposalStructureItem {
+  id: string;
+  name: string;
+  category: 'SETUP' | 'THIRD_PARTY';
+  cost: number;
+}
+
 export interface Proposal {
   id: string;
   code: string;
@@ -106,6 +124,8 @@ export interface Proposal {
   scopeDetails: string;
   validUntil: string;
   createdAt: string;
+  teamMembers?: ProposalTeamMember[];
+  structureItems?: ProposalStructureItem[];
 }
 
 export interface OnboardingStep {
