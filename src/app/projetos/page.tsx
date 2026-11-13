@@ -48,6 +48,16 @@ export default function ProjetosPage() {
   const [showPartnerModal, setShowPartnerModal] = useState(false);
   const [partnerSearchQuery, setPartnerSearchQuery] = useState('');
 
+  // Controle de expansão das etapas por projeto nos cards (inicia oculto/hide por padrão)
+  const [expandedStages, setExpandedStages] = useState<Record<string, boolean>>({});
+
+  const toggleExpandStages = (projectId: string) => {
+    setExpandedStages((prev) => ({
+      ...prev,
+      [projectId]: !prev[projectId],
+    }));
+  };
+
   // Etapas a serem cumpridas
   const [stages, setStages] = useState<{ id: string; title: string; completed: boolean }[]>([
     { id: 'stg-1', title: 'Briefing e Levantamento de Requisitos', completed: false },
@@ -281,39 +291,65 @@ export default function ProjetosPage() {
                     </div>
                   </div>
 
-                  {/* Etapas / Checklist de Entregas com Caixa de Check */}
+                  {/* Etapas / Checklist de Entregas com Expansão (Oculto/Hide por padrão com seta) */}
                   {proj.stages && proj.stages.length > 0 && (
-                    <div className="p-3.5 bg-slate-50 dark:bg-slate-950/70 rounded-xl border border-slate-200 dark:border-slate-800/80 space-y-2">
-                      <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
-                        <span className="flex items-center gap-1.5 text-cyan-600 dark:text-cyan-400">
-                          <CheckSquare className="w-4 h-4" />
-                          Etapas do Projeto (Marque para avançar o progresso):
-                        </span>
-                      </div>
+                    <div className="rounded-xl border border-slate-200 dark:border-slate-800/80 bg-slate-50 dark:bg-slate-950/70 overflow-hidden transition-all">
+                      <button
+                        type="button"
+                        onClick={() => toggleExpandStages(proj.id)}
+                        className="w-full flex items-center justify-between p-3.5 text-left hover:bg-slate-100/70 dark:hover:bg-slate-900/60 transition-colors select-none"
+                      >
+                        <div className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-slate-200">
+                          <CheckSquare className="w-4 h-4 text-cyan-500" />
+                          <span>Etapas do Projeto</span>
+                          <span className="text-[11px] font-normal text-slate-500 dark:text-slate-400">
+                            ({completedStages} de {totalStages} concluídas)
+                          </span>
+                        </div>
 
-                      <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                        {proj.stages.map((stg) => (
-                          <button
-                            key={stg.id}
-                            type="button"
-                            onClick={() => handleToggleProjectStage(proj.id, stg.id)}
-                            className={`w-full flex items-start gap-2.5 p-2 rounded-lg text-left text-xs transition-all ${
-                              stg.completed
-                                ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-800 dark:text-emerald-300 line-through'
-                                : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 border border-slate-200 dark:border-slate-800'
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] font-semibold text-cyan-600 dark:text-cyan-400">
+                            {expandedStages[proj.id] ? 'Recolher' : 'Expandir etapas'}
+                          </span>
+                          <span
+                            className={`p-1 rounded text-slate-400 transition-transform duration-200 ${
+                              expandedStages[proj.id] ? 'rotate-180 text-cyan-500' : ''
                             }`}
                           >
-                            <span className="mt-0.5 flex-shrink-0">
-                              {stg.completed ? (
-                                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                              ) : (
-                                <Square className="w-4 h-4 text-slate-400" />
-                              )}
-                            </span>
-                            <span className="flex-1 font-medium">{stg.title}</span>
-                          </button>
-                        ))}
-                      </div>
+                            <ChevronDown className="w-4 h-4" />
+                          </span>
+                        </div>
+                      </button>
+
+                      {/* Lista de Etapas (Apenas quando expandido) */}
+                      {expandedStages[proj.id] && (
+                        <div className="p-3 pt-0 border-t border-slate-200 dark:border-slate-800/60 mt-1 space-y-1.5 max-h-56 overflow-y-auto">
+                          <p className="text-[11px] text-slate-400 pt-2 pb-1">
+                            Marque a etapa para recalcular o progresso automaticamente:
+                          </p>
+                          {proj.stages.map((stg) => (
+                            <button
+                              key={stg.id}
+                              type="button"
+                              onClick={() => handleToggleProjectStage(proj.id, stg.id)}
+                              className={`w-full flex items-start gap-2.5 p-2 rounded-lg text-left text-xs transition-all ${
+                                stg.completed
+                                  ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-800 dark:text-emerald-300 line-through'
+                                  : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 border border-slate-200 dark:border-slate-800'
+                              }`}
+                            >
+                              <span className="mt-0.5 flex-shrink-0">
+                                {stg.completed ? (
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                                ) : (
+                                  <Square className="w-4 h-4 text-slate-400" />
+                                )}
+                              </span>
+                              <span className="flex-1 font-medium">{stg.title}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -355,7 +391,11 @@ export default function ProjetosPage() {
                     </span>
                   </div>
 
-                  {daysLeft !== null && (
+                  {proj.status === 'COMPLETED' ? (
+                    <span className="px-2.5 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800/40">
+                      Entrega Concluída ✓
+                    </span>
+                  ) : daysLeft !== null ? (
                     <span
                       className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
                         daysLeft < 0
@@ -367,7 +407,7 @@ export default function ProjetosPage() {
                     >
                       {daysLeft < 0 ? `Atrasado ${Math.abs(daysLeft)}d` : `${daysLeft} dias restantes`}
                     </span>
-                  )}
+                  ) : null}
                 </div>
               </div>
             );
