@@ -708,14 +708,14 @@ export default function OrcamentosPage() {
                       <span>Composição do Custo Técnico & Setup</span>
                     </h4>
 
-                    {/* BOTÃO PARA ABRIR TELA DE CALCULAR CUSTO POR FREELANCERS & ESTRUTURA */}
+                    {/* BOTÃO PARA ABRIR TELA DE CALCULAR CUSTO TÉCNICO */}
                     <button
                       type="button"
                       onClick={() => setShowCostCalculatorModal(true)}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white text-xs font-bold shadow-md shadow-cyan-500/20 transition-all hover:scale-105 active:scale-95"
                     >
-                      <Users className="w-3.5 h-3.5" />
-                      <span>Calcular Custo com Freelancers & Estrutura</span>
+                      <Calculator className="w-3.5 h-3.5" />
+                      <span>Calcular Custo Técnico</span>
                       {teamMembers.length > 0 && (
                         <span className="bg-white/20 text-[10px] px-1.5 py-0.2 rounded-full font-mono">
                           {teamMembers.length}
