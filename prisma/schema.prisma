@@ -47,20 +47,25 @@ model Client {
 }
 
 model Supplier {
-  id              String           @id @default(uuid())
-  name            String
-  document        String?          // CNPJ ou CPF
-  category        String           // Freelancer, Ferramenta/SaaS, Tráfego, Designer, Infra
-  email           String?
-  phone           String?
-  hourlyRate      Float?
-  pixKey          String?
-  notes           String?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  id               String           @id @default(uuid())
+  name             String
+  document         String?          // CNPJ ou CPF
+  category         String           // Freelancer, Ferramenta/SaaS, Tráfego, Designer, Infra
+  email            String?
+  phone            String?
+  billingModel     String?          // FIXED_PROJECT, MONTHLY_RETAINER, HOURLY_RATE, FLEXIBLE
+  fixedProjectCost Float?           // Valor fixo por projeto
+  monthlyRetainer  Float?           // Mensalidade recorrente
+  hourlyRate       Float?           // Hora técnica
+  pixKey           String?
+  bankInfo         String?
+  skills           String?
+  notes            String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
-  contacts        ContactHistory[]
-  transactions    Transaction[]
+  contacts         ContactHistory[]
+  transactions     Transaction[]
 }
 
 // ----------------------------------------------------

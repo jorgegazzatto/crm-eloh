@@ -26,16 +26,24 @@ export interface Client {
   createdAt: string; // Data do Cadastro
 }
 
+export type SupplierBillingModel = 'FIXED_PROJECT' | 'MONTHLY_RETAINER' | 'HOURLY_RATE' | 'FLEXIBLE';
+
 export interface Supplier {
   id: string;
   name: string;
-  document?: string;
+  document?: string; // CNPJ ou CPF
   category: string;
   email?: string;
   phone?: string;
-  hourlyRate?: number;
+  billingModel?: SupplierBillingModel; // Modelo principal de contratação
+  fixedProjectCost?: number; // Valor fixo por projeto / escopo
+  monthlyRetainer?: number; // Mensalidade recorrente (fee mensal / SaaS)
+  hourlyRate?: number; // Hora técnica
   pixKey?: string;
+  bankInfo?: string; // Informações bancárias para repasse
+  skills?: string; // Tecnologias ou especialidades principais
   notes?: string;
+  createdAt?: string;
 }
 
 export type ContactChannel = 'WHATSAPP' | 'EMAIL' | 'CALL' | 'MEETING' | 'IN_PERSON';

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { initialProjects, initialClients, initialSuppliers } from '@/lib/mockData';
 import { Project, ProjectStage, Supplier } from '@/lib/types';
@@ -47,10 +47,22 @@ export default function ProjetosPage() {
   const [targetEndDate, setTargetEndDate] = useState(defaultEndStr);
 
   // Parceiros Selecionados (dos cadastrados)
+  const [availableSuppliers, setAvailableSuppliers] = useState<Supplier[]>(initialSuppliers);
   const [selectedPartnerIds, setSelectedPartnerIds] = useState<string[]>([]);
   const [customPartnerText, setCustomPartnerText] = useState('');
   const [showPartnerModal, setShowPartnerModal] = useState(false);
   const [partnerSearchQuery, setPartnerSearchQuery] = useState('');
+
+  // Carregar lista sincronizada de fornecedores / parceiros do localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('eloh_crm_suppliers');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) setAvailableSuppliers(parsed);
+      }
+    } catch {}
+  }, [showPartnerModal]);
 
   // Controle de expansão das etapas por projeto nos cards (inicia oculto/hide por padrão)
   const [expandedStages, setExpandedStages] = useState<Record<string, boolean>>({});
@@ -177,7 +189,7 @@ export default function ProjetosPage() {
     const client = initialClients.find((c) => c.id === clientId);
 
     // Nomes dos parceiros selecionados
-    const chosenPartners = initialSuppliers
+    const chosenPartners = availableSuppliers
       .filter((s) => selectedPartnerIds.includes(s.id))
       .map((s) => s.name);
 
@@ -683,7 +695,7 @@ export default function ProjetosPage() {
                   {/* Exibição SOMENTE DOS ESCOLHIDOS */}
                   {selectedPartnerIds.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {initialSuppliers
+                      {availableSuppliers
                         .filter((supp) => selectedPartnerIds.includes(supp.id))
                         .map((supp) => (
                           <div
@@ -932,11 +944,12 @@ export default function ProjetosPage() {
 
               {/* Lista com checkboxes para múltipla escolha */}
               <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                {initialSuppliers
+                {availableSuppliers
                   .filter(
                     (supp) =>
                       supp.name.toLowerCase().includes(partnerSearchQuery.toLowerCase()) ||
-                      supp.category.toLowerCase().includes(partnerSearchQuery.toLowerCase())
+                      supp.category.toLowerCase().includes(partnerSearchQuery.toLowerCase()) ||
+                      (supp.skills && supp.skills.toLowerCase().includes(partnerSearchQuery.toLowerCase()))
                   )
                   .map((supp) => {
                     const isSelected = selectedPartnerIds.includes(supp.id);
@@ -961,8 +974,11 @@ export default function ProjetosPage() {
                           </span>
                           <div className="truncate">
                             <p className="font-bold text-xs truncate">{supp.name}</p>
-                            <p className="text-[11px] text-slate-400">
-                              {supp.category} {supp.hourlyRate ? `• R$ ${supp.hourlyRate}/h` : ''}
+                            <p className="text-[11px] text-slate-400 truncate">
+                              {supp.category}
+                              {supp.fixedProjectCost ? ` • Fixo: R$ ${supp.fixedProjectCost.toLocaleString('pt-BR')}` : ''}
+                              {supp.monthlyRetainer ? ` • Mensal: R$ ${supp.monthlyRetainer.toLocaleString('pt-BR')}/mês` : ''}
+                              {supp.hourlyRate ? ` • R$ ${supp.hourlyRate.toLocaleString('pt-BR')}/h` : ''}
                             </p>
                           </div>
                         </div>
