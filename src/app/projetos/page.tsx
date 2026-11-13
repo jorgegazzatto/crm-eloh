@@ -24,16 +24,19 @@ import {
   X,
   Search,
   UserPlus,
+  Pencil,
 } from 'lucide-react';
 
 export default function ProjetosPage() {
   const [projects, setProjects] = useState<Project[]>(initialProjects);
   const [showModal, setShowModal] = useState(false);
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
 
-  // New Project Form States
+  // Project Form States
   const [name, setName] = useState('');
   const [clientId, setClientId] = useState(initialClients[0]?.id || '');
   const [serviceType, setServiceType] = useState('DATA_BI');
+  const [status, setStatus] = useState<Project['status']>('IN_PROGRESS');
   const [budget, setBudget] = useState(4500);
   const [brainstormNotes, setBrainstormNotes] = useState('');
   
@@ -57,6 +60,60 @@ export default function ProjetosPage() {
       ...prev,
       [projectId]: !prev[projectId],
     }));
+  };
+
+  // Abrir Modal de Criação (limpo)
+  const openCreateModal = () => {
+    setEditingProjectId(null);
+    setName('');
+    setClientId(initialClients[0]?.id || '');
+    setServiceType('DATA_BI');
+    setStatus('IN_PROGRESS');
+    setBudget(4500);
+    setStartDate(todayStr);
+    setTargetEndDate(defaultEndStr);
+    setBrainstormNotes('');
+    setSelectedPartnerIds([]);
+    setCustomPartnerText('');
+    setStages([
+      { id: 'stg-1', title: 'Briefing e Levantamento de Requisitos', completed: false },
+      { id: 'stg-2', title: 'Setup de Ambiente e Arquitetura', completed: false },
+      { id: 'stg-3', title: 'Desenvolvimento e Configurações', completed: false },
+      { id: 'stg-4', title: 'Homologação e Validação Final', completed: false },
+    ]);
+    setShowModal(true);
+  };
+
+  // Abrir Modal de Edição (carrega dados do projeto)
+  const openEditModal = (proj: Project) => {
+    setEditingProjectId(proj.id);
+    setName(proj.name);
+    setClientId(proj.clientId);
+    setServiceType(proj.serviceType);
+    setStatus(proj.status);
+    setBudget(proj.budget);
+    setStartDate(proj.startDate);
+    setTargetEndDate(proj.targetEndDate);
+    setBrainstormNotes(proj.brainstormNotes || '');
+    setSelectedPartnerIds(proj.partnerIds || []);
+    setCustomPartnerText('');
+    setStages(
+      proj.stages && proj.stages.length > 0
+        ? proj.stages.map((s) => ({ ...s }))
+        : [
+            { id: 'stg-1', title: 'Briefing e Levantamento de Requisitos', completed: false },
+            { id: 'stg-2', title: 'Setup de Ambiente e Arquitetura', completed: false },
+          ]
+    );
+    setShowModal(true);
+  };
+
+  // Excluir Projeto
+  const handleDeleteProject = (projectId: string) => {
+    if (confirm('Tem certeza de que deseja excluir este projeto?')) {
+      setProjects((prev) => prev.filter((p) => p.id !== projectId));
+      setShowModal(false);
+    }
   };
 
   // Etapas a serem cumpridas
@@ -115,7 +172,7 @@ export default function ProjetosPage() {
     }
   };
 
-  const handleCreateProject = (e: React.FormEvent) => {
+  const handleSaveProject = (e: React.FormEvent) => {
     e.preventDefault();
     const client = initialClients.find((c) => c.id === clientId);
 
@@ -130,39 +187,56 @@ export default function ProjetosPage() {
 
     // Cálculo inicial de progresso baseado nas etapas marcadas
     const completedCount = stages.filter((s) => s.completed).length;
-    const initialProgress = stages.length > 0 ? Math.round((completedCount / stages.length) * 100) : 0;
+    const calculatedProgress = stages.length > 0 ? Math.round((completedCount / stages.length) * 100) : 0;
 
-    const newProj: Project = {
-      id: `proj-${Date.now()}`,
-      name,
-      status: initialProgress === 100 ? 'COMPLETED' : 'IN_PROGRESS',
-      serviceType,
-      clientId,
-      clientName: client ? client.tradeName : 'Cliente',
-      startDate: startDate || todayStr,
-      targetEndDate: targetEndDate || defaultEndStr,
-      budget,
-      brainstormNotes,
-      partnerIds: selectedPartnerIds,
-      partnersInvolved: chosenPartners.join(', ') || 'Equipe Interna Elohdigital',
-      stages: stages,
-      progressPercent: initialProgress,
-    };
+    let finalStatus = status;
+    if (calculatedProgress === 100) finalStatus = 'COMPLETED';
 
-    setProjects([newProj, ...projects]);
+    if (editingProjectId) {
+      // Atualizar projeto existente
+      setProjects((prev) =>
+        prev.map((proj) => {
+          if (proj.id !== editingProjectId) return proj;
+          return {
+            ...proj,
+            name,
+            serviceType,
+            status: finalStatus,
+            clientId,
+            clientName: client ? client.tradeName : proj.clientName,
+            startDate: startDate || todayStr,
+            targetEndDate: targetEndDate || defaultEndStr,
+            budget,
+            brainstormNotes,
+            partnerIds: selectedPartnerIds,
+            partnersInvolved: chosenPartners.join(', ') || 'Equipe Interna Elohdigital',
+            stages: stages,
+            progressPercent: calculatedProgress,
+          };
+        })
+      );
+    } else {
+      // Criar novo projeto
+      const newProj: Project = {
+        id: `proj-${Date.now()}`,
+        name,
+        status: finalStatus,
+        serviceType,
+        clientId,
+        clientName: client ? client.tradeName : 'Cliente',
+        startDate: startDate || todayStr,
+        targetEndDate: targetEndDate || defaultEndStr,
+        budget,
+        brainstormNotes,
+        partnerIds: selectedPartnerIds,
+        partnersInvolved: chosenPartners.join(', ') || 'Equipe Interna Elohdigital',
+        stages: stages,
+        progressPercent: calculatedProgress,
+      };
+      setProjects([newProj, ...projects]);
+    }
+
     setShowModal(false);
-
-    // Reset form
-    setName('');
-    setBrainstormNotes('');
-    setSelectedPartnerIds([]);
-    setCustomPartnerText('');
-    setStages([
-      { id: 'stg-1', title: 'Briefing e Levantamento de Requisitos', completed: false },
-      { id: 'stg-2', title: 'Setup de Ambiente e Arquitetura', completed: false },
-      { id: 'stg-3', title: 'Desenvolvimento e Configurações', completed: false },
-      { id: 'stg-4', title: 'Homologação e Validação Final', completed: false },
-    ]);
   };
 
   // Alternar conclusão de etapa de um projeto existente e recalcular progresso
@@ -214,7 +288,7 @@ export default function ProjetosPage() {
         subtitle="Acompanhe entregas, etapas com checklist de progresso automático, equipe alocada e prazos"
       >
         <button
-          onClick={() => setShowModal(true)}
+          onClick={openCreateModal}
           className="flex items-center gap-1.5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white text-xs font-semibold px-3.5 py-2 rounded-lg shadow-md shadow-cyan-500/10 transition-all hover:scale-105 active:scale-95"
         >
           <Plus className="w-3.5 h-3.5" />
@@ -247,10 +321,24 @@ export default function ProjetosPage() {
                           className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${
                             proj.status === 'COMPLETED'
                               ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800/40'
+                              : proj.status === 'PLANNING'
+                              ? 'bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 border border-purple-300 dark:border-purple-800/40'
+                              : proj.status === 'IN_REVIEW'
+                              ? 'bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-800/40'
+                              : proj.status === 'PAUSED'
+                              ? 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700'
                               : 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800/40'
                           }`}
                         >
-                          {proj.status === 'COMPLETED' ? 'Concluído' : proj.status === 'IN_PROGRESS' ? 'Em Andamento' : proj.status}
+                          {proj.status === 'COMPLETED'
+                            ? 'Concluído'
+                            : proj.status === 'PLANNING'
+                            ? 'Planejamento'
+                            : proj.status === 'IN_REVIEW'
+                            ? 'Em Revisão'
+                            : proj.status === 'PAUSED'
+                            ? 'Pausado'
+                            : 'Em Andamento'}
                         </span>
                       </div>
                       <h3 className="font-bold text-base text-slate-900 dark:text-white mt-1.5">
@@ -261,11 +349,24 @@ export default function ProjetosPage() {
                       </p>
                     </div>
 
-                    <div className="text-right">
-                      <span className="text-[10px] text-slate-400 block uppercase">Orçamento</span>
-                      <span className="text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                        R$ {proj.budget.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </span>
+                    <div className="flex items-center gap-2">
+                      <div className="text-right">
+                        <span className="text-[10px] text-slate-400 block uppercase">Orçamento</span>
+                        <span className="text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                          R$ {proj.budget.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+
+                      {/* Botão de Editar Projeto */}
+                      <button
+                        type="button"
+                        onClick={() => openEditModal(proj)}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-cyan-50 dark:bg-slate-800/80 dark:hover:bg-cyan-950/60 text-slate-600 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-400 border border-slate-200 dark:border-slate-700/60 text-xs font-semibold transition-all hover:scale-105 active:scale-95 shadow-xs ml-1"
+                        title="Editar Informações do Projeto"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                        <span>Editar</span>
+                      </button>
                     </div>
                   </div>
 
@@ -415,21 +516,23 @@ export default function ProjetosPage() {
           })}
         </div>
 
-        {/* MODAL: CRIAR NOVO PROJETO */}
+        {/* MODAL: CRIAR OU EDITAR PROJETO */}
         {showModal && (
           <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
             <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-2xl p-6 space-y-5 shadow-2xl my-8">
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
                 <div className="flex items-center gap-2">
                   <span className="p-2 rounded-lg bg-cyan-500/10 text-cyan-600 dark:text-cyan-400">
-                    <FolderKanban className="w-5 h-5" />
+                    {editingProjectId ? <Pencil className="w-5 h-5" /> : <FolderKanban className="w-5 h-5" />}
                   </span>
                   <div>
                     <h3 className="font-bold text-base text-slate-900 dark:text-white">
-                      Criar Novo Projeto
+                      {editingProjectId ? 'Editar Projeto' : 'Criar Novo Projeto'}
                     </h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Cadastre escopo, equipe parceira, etapas e cronograma com calendário
+                      {editingProjectId
+                        ? 'Atualize escopo, status, equipe parceira, etapas e cronograma'
+                        : 'Cadastre escopo, equipe parceira, etapas e cronograma com calendário'}
                     </p>
                   </div>
                 </div>
@@ -442,7 +545,7 @@ export default function ProjetosPage() {
                 </button>
               </div>
 
-              <form onSubmit={handleCreateProject} className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
+              <form onSubmit={handleSaveProject} className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
                 {/* 1. Nome & Cliente */}
                 <div>
                   <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
@@ -458,7 +561,7 @@ export default function ProjetosPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   <div>
                     <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
                       Cliente *
@@ -490,6 +593,23 @@ export default function ProjetosPage() {
                       <option value="WEB_DEV">Desenvolvimento Web</option>
                       <option value="PAID_TRAFFIC">Tráfego Pago</option>
                       <option value="CONSULTING">Consultoria</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                      Status do Projeto
+                    </label>
+                    <select
+                      value={status}
+                      onChange={(e) => setStatus(e.target.value as Project['status'])}
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-cyan-500 font-medium"
+                    >
+                      <option value="PLANNING">Planejamento</option>
+                      <option value="IN_PROGRESS">Em Andamento</option>
+                      <option value="IN_REVIEW">Em Revisão</option>
+                      <option value="COMPLETED">Concluído</option>
+                      <option value="PAUSED">Pausado</option>
                     </select>
                   </div>
 
@@ -737,20 +857,34 @@ export default function ProjetosPage() {
                 </div>
 
                 {/* Botões do Modal */}
-                <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                  <button
-                    type="button"
-                    onClick={() => setShowModal(false)}
-                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold rounded-xl transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-6 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-cyan-500/20 transition-all hover:scale-105 active:scale-95"
-                  >
-                    Salvar Projeto
-                  </button>
+                <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                  <div>
+                    {editingProjectId && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteProject(editingProjectId)}
+                        className="flex items-center gap-1.5 px-3 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 text-xs font-semibold rounded-xl border border-rose-200 dark:border-rose-900/50 transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Excluir Projeto</span>
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowModal(false)}
+                      className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold rounded-xl transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-6 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-cyan-500/20 transition-all hover:scale-105 active:scale-95"
+                    >
+                      {editingProjectId ? 'Salvar Alterações' : 'Salvar Projeto'}
+                    </button>
+                  </div>
                 </div>
               </form>
             </div>
