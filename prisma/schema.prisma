@@ -1,0 +1,253 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ----------------------------------------------------
+// CLIENTES & FORNECEDORES
+// ----------------------------------------------------
+model Client {
+  id              String           @id @default(uuid())
+  corporateName   String           // Razão Social
+  tradeName       String           // Nome Fantasia
+  document        String?          // CNPJ ou CPF
+  email           String?
+  phone           String?
+  contactPerson   String?          // Pessoa de contato principal
+  segment         String?          // Ex: E-commerce, Saúde, Imobiliário, Tech
+  status          String           @default("LEAD") // LEAD, ONBOARDING, ACTIVE_RECURRENT, ACTIVE_PROJECT, INACTIVE
+  city            String?
+  state           String?
+  notes           String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  contacts        ContactHistory[]
+  deals           LeadDeal[]
+  proposals       Proposal[]
+  onboardings     OnboardingStep[]
+  projects        Project[]
+  tickets         Ticket[]
+  tasks           Task[]
+  transactions    Transaction[]
+}
+
+model Supplier {
+  id              String           @id @default(uuid())
+  name            String
+  document        String?          // CNPJ ou CPF
+  category        String           // Freelancer, Ferramenta/SaaS, Tráfego, Designer, Infra
+  email           String?
+  phone           String?
+  hourlyRate      Float?
+  pixKey          String?
+  notes           String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  contacts        ContactHistory[]
+  transactions    Transaction[]
+}
+
+// ----------------------------------------------------
+// HISTÓRICO DE CONTATOS & INTERAÇÕES (DATA E HORA)
+// ----------------------------------------------------
+model ContactHistory {
+  id              String           @id @default(uuid())
+  date            DateTime         @default(now()) // Data e Hora exata
+  channel         String           // WHATSAPP, EMAIL, CALL, MEETING, IN_PERSON
+  summary         String           // Resumo do que foi alinhado
+  nextFollowUp    DateTime?        // Próximo contato agendado
+  author          String?          // Quem fez o contato
+
+  clientId        String?
+  client          Client?          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  supplierId      String?
+  supplier        Supplier?        @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime         @default(now())
+}
+
+// ----------------------------------------------------
+// PROSPECÇÃO & FUNIL DE VENDAS (PIPELINE)
+// ----------------------------------------------------
+model LeadDeal {
+  id              String           @id @default(uuid())
+  title           String           // Ex: Consultoria BI + Tráfego Pago
+  stage           String           @default("DISCOVERY") // DISCOVERY, QUALIFIED, PROPOSAL_SENT, NEGOTIATION, WON, LOST
+  estimatedValue  Float            @default(0.0)
+  probability     Int              @default(50) // Porcentagem 0 - 100
+  expectedClose   DateTime?
+  lostReason      String?          // Preço, Escopo, Decidiu esperar, Concorrente
+  priority        String           @default("MEDIUM") // LOW, MEDIUM, HIGH
+
+  clientId        String
+  client          Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  proposals       Proposal[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+// ----------------------------------------------------
+// CATÁLOGO DE PRODUTOS E SERVIÇOS
+// ----------------------------------------------------
+model ServiceItem {
+  id              String           @id @default(uuid())
+  name            String           // Ex: Dashboard PowerBI Executivo
+  category        String           // DATA_BI, AUTOMATION, WEB_DEV, PAID_TRAFFIC, CONSULTING
+  billingType     String           @default("FIXED") // FIXED (Projeto), MONTHLY (Recorrente), HOURLY (Hora Técnica)
+  basePrice       Float            @default(0.0)
+  defaultHours    Float            @default(0.0)
+  description     String?
+  isActive        Boolean          @default(true)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+// ----------------------------------------------------
+// ORÇAMENTOS & CALCULADORA DE CUSTO / SETUP / HORA
+// ----------------------------------------------------
+model Proposal {
+  id              String           @id @default(uuid())
+  code            String           @unique // Ex: PROP-2026-001
+  title           String
+  status          String           @default("DRAFT") // DRAFT, SENT, ACCEPTED, DECLINED
+
+  // Cálculos financeiros do orçamento
+  estimatedHours  Float            @default(0.0)
+  hourlyRate      Float            @default(150.0) // Valor da hora base
+  laborCost       Float            @default(0.0) // estimatedHours * hourlyRate
+  setupCost       Float            @default(0.0) // Taxa de setup, contas, integrações iniciais
+  thirdPartyCost  Float            @default(0.0) // Custos extras (APIs, freelas, licenças)
+  marginPercent   Float            @default(30.0) // Margem de lucro esperada %
+  totalAmount     Float            @default(0.0) // Valor final proposto ao cliente
+
+  paymentTerms    String?          // Ex: 50% de entrada + 50% na entrega ou Mensal recorrente
+  scopeDetails    String?          // Escopo detalhado do serviço
+  validUntil      DateTime?
+
+  clientId        String
+  client          Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  leadDealId      String?
+  leadDeal        LeadDeal?        @relation(fields: [leadDealId], references: [id], onDelete: SetNull)
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+// ----------------------------------------------------
+// ONBOARDING DO CLIENTE
+// ----------------------------------------------------
+model OnboardingStep {
+  id              String           @id @default(uuid())
+  title           String           // Ex: Coleta de acessos Google Analytics e Meta BM
+  category        String           // CONTRACT, ACCESS, COMMUNICATION, KICKOFF, SETUP
+  status          String           @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED
+  dueDate         DateTime?
+  completedAt     DateTime?
+  notes           String?
+
+  clientId        String
+  client          Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime         @default(now())
+}
+
+// ----------------------------------------------------
+// GESTÃO DE PROJETOS & BRAINSTORMING
+// ----------------------------------------------------
+model Project {
+  id              String           @id @default(uuid())
+  name            String           // Ex: Implantação ETL & Relatórios de Vendas
+  status          String           @default("PLANNING") // PLANNING, IN_PROGRESS, IN_REVIEW, COMPLETED, PAUSED
+  serviceType     String           // DATA_BI, AUTOMATION, WEB_DEV, PAID_TRAFFIC
+  startDate       DateTime?
+  targetEndDate   DateTime?
+  budget          Float            @default(0.0)
+
+  brainstormNotes String?          // Área rica para anotações de ideias, links, referências
+  partnersInvolved String?         // Freelancers e parceiros alocados
+
+  clientId        String
+  client          Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  tasks           Task[]
+  tickets         Ticket[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+// ----------------------------------------------------
+// CENTRAL DE CHAMADOS / HELPDESK
+// ----------------------------------------------------
+model Ticket {
+  id              String           @id @default(uuid())
+  ticketNumber    Int              @default(1)
+  title           String
+  description     String
+  category        String           // BUG, FEATURE_REQUEST, REPORT_ADJUSTMENT, ADS_CAMPAIGN, GENERAL
+  priority        String           @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  status          String           @default("OPEN") // OPEN, IN_PROGRESS, WAITING_APPROVAL, RESOLVED, CLOSED
+  resolutionNotes String?
+
+  clientId        String
+  client          Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  projectId       String?
+  project         Project?         @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+// ----------------------------------------------------
+// TAREFAS / TO-DO
+// ----------------------------------------------------
+model Task {
+  id              String           @id @default(uuid())
+  title           String
+  description     String?
+  status          String           @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED
+  priority        String           @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  dueDate         DateTime?
+
+  clientId        String?
+  client          Client?          @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  projectId       String?
+  project         Project?         @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+// ----------------------------------------------------
+// FINANCEIRO: FLUXO DE CAIXA (ENTRADAS & SAÍDAS)
+// ----------------------------------------------------
+model Transaction {
+  id              String           @id @default(uuid())
+  description     String
+  type            String           // INCOME (Entrada), EXPENSE (Saída)
+  category        String           // MONTHLY_RETAINER, PROJECT_PAYMENT, SETUP_FEE, SAAS_TOOLS, FREELANCER, TAX, INFRA_HOSTING, OTHER
+  amount          Float
+  dueDate         DateTime
+  paidDate        DateTime?
+  status          String           @default("PENDING") // PENDING, PAID, OVERDUE, CANCELLED
+  paymentMethod   String?          // PIX, BOLETO, CARTAO, TRANSFERENCIA
+
+  clientId        String?
+  client          Client?          @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  supplierId      String?
+  supplier        Supplier?        @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
