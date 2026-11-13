@@ -390,24 +390,11 @@ export default function ProjetosPage() {
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <div className="text-right">
-                        <span className="text-[10px] text-slate-400 block uppercase">Orçamento</span>
-                        <span className="text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                          R$ {proj.budget.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </span>
-                      </div>
-
-                      {/* Botão de Editar Projeto */}
-                      <button
-                        type="button"
-                        onClick={() => openEditModal(proj)}
-                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-cyan-50 dark:bg-slate-800/80 dark:hover:bg-cyan-950/60 text-slate-600 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-400 border border-slate-200 dark:border-slate-700/60 text-xs font-semibold transition-all hover:scale-105 active:scale-95 shadow-xs ml-1"
-                        title="Editar Informações do Projeto"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                        <span>Editar</span>
-                      </button>
+                    <div className="text-right">
+                      <span className="text-[10px] text-slate-400 block uppercase">Orçamento</span>
+                      <span className="text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                        R$ {proj.budget.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </span>
                     </div>
                   </div>
 
@@ -521,7 +508,7 @@ export default function ProjetosPage() {
                   )}
                 </div>
 
-                {/* Rodapé com Datas de Início e Entrega (Calendário) */}
+                {/* Rodapé com Datas de Início e Entrega (Calendário) e Botão Editar */}
                 <div className="pt-3 border-t border-slate-200 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
                   <div className="flex items-center gap-3">
                     <span className="flex items-center gap-1">
@@ -534,23 +521,36 @@ export default function ProjetosPage() {
                     </span>
                   </div>
 
-                  {proj.status === 'COMPLETED' ? (
-                    <span className="px-2.5 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800/40">
-                      Entrega Concluída ✓
-                    </span>
-                  ) : daysLeft !== null ? (
-                    <span
-                      className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
-                        daysLeft < 0
-                          ? 'bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300'
-                          : daysLeft <= 5
-                          ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
-                      }`}
+                  <div className="flex items-center gap-2">
+                    {/* Botão de Editar Projeto na parte de baixo do card */}
+                    <button
+                      type="button"
+                      onClick={() => openEditModal(proj)}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-cyan-50 dark:bg-slate-800/80 dark:hover:bg-cyan-950/60 text-slate-600 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-400 border border-slate-200 dark:border-slate-700/60 text-[11px] font-semibold transition-all hover:scale-105 active:scale-95 shadow-xs"
+                      title="Editar Informações do Projeto"
                     >
-                      {daysLeft < 0 ? `Atrasado ${Math.abs(daysLeft)}d` : `${daysLeft} dias restantes`}
-                    </span>
-                  ) : null}
+                      <Pencil className="w-3 h-3" />
+                      <span>Editar</span>
+                    </button>
+
+                    {proj.status === 'COMPLETED' ? (
+                      <span className="px-2.5 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800/40">
+                        Entrega Concluída ✓
+                      </span>
+                    ) : daysLeft !== null ? (
+                      <span
+                        className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
+                          daysLeft < 0
+                            ? 'bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300'
+                            : daysLeft <= 5
+                            ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                        }`}
+                      >
+                        {daysLeft < 0 ? `Atrasado ${Math.abs(daysLeft)}d` : `${daysLeft} dias restantes`}
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
               </div>
             );
