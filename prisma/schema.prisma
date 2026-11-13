@@ -11,20 +11,30 @@ datasource db {
 // CLIENTES & FORNECEDORES
 // ----------------------------------------------------
 model Client {
-  id              String           @id @default(uuid())
-  corporateName   String           // Razão Social
-  tradeName       String           // Nome Fantasia
-  document        String?          // CNPJ ou CPF
-  email           String?
-  phone           String?
-  contactPerson   String?          // Pessoa de contato principal
-  segment         String?          // Ex: E-commerce, Saúde, Imobiliário, Tech
-  status          String           @default("LEAD") // LEAD, ONBOARDING, ACTIVE_RECURRENT, ACTIVE_PROJECT, INACTIVE
-  city            String?
-  state           String?
-  notes           String?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  id                    String           @id @default(uuid())
+  corporateName         String           // Razão Social
+  tradeName             String           // Nome Fantasia
+  personType            String?          @default("PJ") // PJ, PF
+  document              String?          // CNPJ ou CPF
+  stateRegistration     String?          // Inscrição Estadual
+  municipalRegistration String?          // Inscrição Municipal
+  taxRegime             String?          // Simples Nacional, Lucro Presumido, Lucro Real, MEI
+  legalRepresentative   String?          // Responsável Legal
+  email                 String?
+  phone                 String?
+  contactPerson         String?          // Pessoa de contato principal
+  segment               String?          // Ex: E-commerce, Saúde, Imobiliário, Tech
+  status                String           @default("LEAD") // LEAD, ONBOARDING, ACTIVE_RECURRENT, ACTIVE_PROJECT, INACTIVE
+  zipCode               String?
+  address               String?
+  addressNumber         String?
+  addressComplement     String?
+  neighborhood          String?
+  city                  String?
+  state                 String?
+  notes                 String?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
 
   contacts        ContactHistory[]
   deals           LeadDeal[]

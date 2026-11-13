@@ -2,18 +2,28 @@ export type ClientStatus = 'LEAD' | 'ONBOARDING' | 'ACTIVE_RECURRENT' | 'ACTIVE_
 
 export interface Client {
   id: string;
-  corporateName: string;
-  tradeName: string;
-  document?: string;
+  corporateName: string; // Razão Social / Nome Completo
+  tradeName: string; // Nome Fantasia
+  personType?: 'PJ' | 'PF'; // Jurídica ou Física
+  document?: string; // CNPJ ou CPF
+  stateRegistration?: string; // Inscrição Estadual (IE)
+  municipalRegistration?: string; // Inscrição Municipal (IM)
+  taxRegime?: string; // Regime Tributário
+  legalRepresentative?: string; // Responsável Legal / Jurídico
   email?: string;
   phone?: string;
   contactPerson?: string;
   segment?: string;
   status: ClientStatus;
+  zipCode?: string; // CEP
+  address?: string; // Logradouro
+  addressNumber?: string; // Número
+  addressComplement?: string; // Complemento
+  neighborhood?: string; // Bairro
   city?: string;
   state?: string;
-  notes?: string;
-  createdAt: string;
+  notes?: string; // Observações Gerais
+  createdAt: string; // Data do Cadastro
 }
 
 export interface Supplier {
