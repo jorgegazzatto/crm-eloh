@@ -35,6 +35,9 @@ export interface CompanySettings {
   bankName: string;
   bankAgency: string;
   bankAccount: string;
+
+  // Observações Gerais
+  generalNotes: string;
 }
 
 const defaultCompanySettings: CompanySettings = {
@@ -61,6 +64,7 @@ const defaultCompanySettings: CompanySettings = {
   bankName: 'Nubank / Inter',
   bankAgency: '0001',
   bankAccount: '1234567-8',
+  generalNotes: 'Empresa especializada em soluções de tecnologia, análise de dados e marketing digital. Atendimento comercial de segunda a sexta-feira.',
 };
 
 interface CompanyContextType {

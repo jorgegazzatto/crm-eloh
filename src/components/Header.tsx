@@ -14,13 +14,7 @@ interface HeaderProps {
 
 export function Header({ title, subtitle, children }: HeaderProps) {
   const { settings } = useCompany();
-  const { theme, resolvedTheme, setTheme } = useTheme();
-
-  const toggleTheme = () => {
-    if (theme === 'dark') setTheme('light');
-    else if (theme === 'light') setTheme('system');
-    else setTheme('dark');
-  };
+  const { theme, setTheme } = useTheme();
 
   return (
     <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-[#0b0f19]/80 backdrop-blur-md sticky top-0 z-20 px-6 flex items-center justify-between transition-colors">
@@ -40,28 +34,55 @@ export function Header({ title, subtitle, children }: HeaderProps) {
           <input
             type="text"
             placeholder="Buscar clientes, propostas, tarefas..."
-            className="w-64 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors"
+            className="w-56 lg:w-64 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors"
           />
+        </div>
+
+        {/* Seletor de Tema ao lado da Busca (Light, Dark, System) */}
+        <div
+          className="flex items-center bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-0.5"
+          title="Alterar tema: Claro, Escuro ou Sistema"
+        >
+          <button
+            type="button"
+            onClick={() => setTheme('light')}
+            title="Tema Claro (Light)"
+            className={`p-1.5 rounded-md transition-all ${
+              theme === 'light'
+                ? 'bg-white dark:bg-slate-800 text-amber-500 shadow-xs'
+                : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+            }`}
+          >
+            <Sun className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setTheme('dark')}
+            title="Tema Escuro (Dark)"
+            className={`p-1.5 rounded-md transition-all ${
+              theme === 'dark'
+                ? 'bg-white dark:bg-slate-800 text-indigo-400 shadow-xs'
+                : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+            }`}
+          >
+            <Moon className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setTheme('system')}
+            title="Tema Automático do Sistema (System)"
+            className={`p-1.5 rounded-md transition-all ${
+              theme === 'system'
+                ? 'bg-white dark:bg-slate-800 text-cyan-500 shadow-xs'
+                : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+            }`}
+          >
+            <Laptop className="w-3.5 h-3.5" />
+          </button>
         </div>
 
         {/* Custom Actions passed from page */}
         {children}
-
-        {/* Botão Seletor Rápido de Tema */}
-        <button
-          type="button"
-          onClick={toggleTheme}
-          title={`Tema atual: ${theme}. Clique para alternar.`}
-          className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700/60 transition-colors"
-        >
-          {theme === 'system' ? (
-            <Laptop className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
-          ) : resolvedTheme === 'dark' ? (
-            <Moon className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
-          ) : (
-            <Sun className="w-4 h-4 text-amber-500" />
-          )}
-        </button>
 
         {/* Botão Atalho Configurações */}
         <Link
