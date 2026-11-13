@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { initialClients, initialSuppliers } from '@/lib/mockData';
-import { Client, Supplier, ClientStatus, SupplierBillingModel } from '@/lib/types';
+import { Client, Supplier, ClientStatus, SupplierBillingModel, SupplierKind, isFreelancerOrTeam, isStructureOrApi } from '@/lib/types';
 import {
   Users,
   Plus,
@@ -30,6 +30,7 @@ import {
   CreditCard,
   Banknote,
   Repeat,
+  Server,
 } from 'lucide-react';
 
 const STORAGE_SUPPLIERS_KEY = 'eloh_crm_suppliers';
@@ -77,6 +78,7 @@ export default function ClientesPage() {
 
   // Form States para Fornecedores & Parceiros
   const [supName, setSupName] = useState('');
+  const [supKind, setSupKind] = useState<SupplierKind>('FREELANCER_EQUIPE');
   const [supCategory, setSupCategory] = useState('Freelancer Dev');
   const [supDocument, setSupDocument] = useState('');
   const [supEmail, setSupEmail] = useState('');
@@ -246,6 +248,7 @@ export default function ClientesPage() {
   const openCreateSupplierModal = () => {
     setEditingSupplierId(null);
     setSupName('');
+    setSupKind('FREELANCER_EQUIPE');
     setSupCategory('Freelancer Dev');
     setSupDocument('');
     setSupEmail('');
@@ -265,6 +268,7 @@ export default function ClientesPage() {
   const openEditSupplierModal = (supp: Supplier) => {
     setEditingSupplierId(supp.id);
     setSupName(supp.name);
+    setSupKind(supp.kind || (isFreelancerOrTeam(supp) ? 'FREELANCER_EQUIPE' : 'ESTRUTURA_API'));
     setSupCategory(supp.category);
     setSupDocument(supp.document || '');
     setSupEmail(supp.email || '');
@@ -304,6 +308,7 @@ export default function ClientesPage() {
     const payload: Supplier = {
       id: editingSupplierId || `sup-${Date.now()}`,
       name: supName.trim(),
+      kind: supKind,
       category: supCategory,
       document: supDocument.trim(),
       email: supEmail.trim().toLowerCase(),
@@ -643,10 +648,21 @@ export default function ClientesPage() {
                   {/* Cabeçalho do Card */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 uppercase tracking-wider inline-block">
-                        {supplier.category}
-                      </span>
-                      <h3 className="font-bold text-slate-900 dark:text-white text-base leading-snug mt-1 truncate">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span
+                          className={`text-[9px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider inline-block ${
+                            isFreelancerOrTeam(supplier)
+                              ? 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/30'
+                              : 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30'
+                          }`}
+                        >
+                          {isFreelancerOrTeam(supplier) ? '👤 Freelancer / Equipe' : '🖥️ Estrutura & APIs'}
+                        </span>
+                        <span className="text-[9px] font-medium px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700/60 inline-block">
+                          {supplier.category}
+                        </span>
+                      </div>
+                      <h3 className="font-bold text-slate-900 dark:text-white text-base leading-snug mt-1.5 truncate">
                         {supplier.name}
                       </h3>
                       {supplier.document && (
@@ -1261,6 +1277,58 @@ export default function ClientesPage() {
                     </div>
                   </div>
 
+                  {/* Seletor de Tipo / Classificação do Fornecedor */}
+                  <div className="pt-1">
+                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                      Classificação / Tipo do Cadastro *
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSupKind('FREELANCER_EQUIPE');
+                          if (supCategory === 'Infraestrutura Cloud' || supCategory === 'Ferramenta / IA') {
+                            setSupCategory('Freelancer Dev');
+                          }
+                          setSupBillingModel('HOURLY_RATE');
+                        }}
+                        className={`p-2.5 rounded-xl border text-left transition-all flex items-center gap-2.5 ${
+                          supKind === 'FREELANCER_EQUIPE'
+                            ? 'bg-cyan-500/10 border-cyan-500 text-cyan-700 dark:text-cyan-300 shadow-xs'
+                            : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300'
+                        }`}
+                      >
+                        <Users className="w-4 h-4 text-cyan-500 flex-shrink-0" />
+                        <div>
+                          <span className="text-xs font-bold block">1. Freelancer / Equipe</span>
+                          <span className="text-[10px] text-slate-400 block">Mão de obra técnica (horas / projeto)</span>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSupKind('ESTRUTURA_API');
+                          if (supCategory === 'Freelancer Dev' || supCategory === 'Designer UI/UX') {
+                            setSupCategory('Infraestrutura Cloud');
+                          }
+                          setSupBillingModel('MONTHLY_RETAINER');
+                        }}
+                        className={`p-2.5 rounded-xl border text-left transition-all flex items-center gap-2.5 ${
+                          supKind === 'ESTRUTURA_API'
+                            ? 'bg-indigo-500/10 border-indigo-500 text-indigo-700 dark:text-indigo-300 shadow-xs'
+                            : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300'
+                        }`}
+                      >
+                        <Server className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+                        <div>
+                          <span className="text-xs font-bold block">2. Estrutura & Ferramentas</span>
+                          <span className="text-[10px] text-slate-400 block">Setup, VPS, APIs e licenças de terceiros</span>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                     <div className="sm:col-span-2">
                       <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
@@ -1268,7 +1336,7 @@ export default function ClientesPage() {
                       </label>
                       <input
                         type="text"
-                        placeholder="Ex: Felipe Ramos (Dev Frontend / React)"
+                        placeholder={supKind === 'FREELANCER_EQUIPE' ? "Ex: Felipe Ramos (Dev Frontend / React)" : "Ex: Servidor VPS Oracle / Dokploy Host"}
                         value={supName}
                         onChange={(e) => setSupName(e.target.value)}
                         className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg p-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-cyan-500 font-medium"
@@ -1285,15 +1353,27 @@ export default function ClientesPage() {
                         onChange={(e) => setSupCategory(e.target.value)}
                         className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg p-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-cyan-500 font-medium"
                       >
-                        <option value="Freelancer Dev">Freelancer Dev</option>
-                        <option value="Tráfego Pago / Ads">Tráfego Pago / Ads</option>
-                        <option value="Designer UI/UX">Designer UI/UX</option>
-                        <option value="Infraestrutura Cloud">Infraestrutura Cloud</option>
-                        <option value="Ferramenta / IA">Ferramenta / SaaS IA</option>
-                        <option value="Copywriter / Conteúdo">Copywriter / Conteúdo</option>
-                        <option value="Consultoria Externa">Consultoria Externa</option>
-                        <option value="Contabilidade & Jurídico">Contabilidade & Jurídico</option>
-                        <option value="Outro">Outro Prestador</option>
+                        {supKind === 'FREELANCER_EQUIPE' ? (
+                          <>
+                            <option value="Freelancer Dev">Freelancer Dev</option>
+                            <option value="Tráfego Pago / Ads">Tráfego Pago / Ads</option>
+                            <option value="Designer UI/UX">Designer UI/UX</option>
+                            <option value="Copywriter / Conteúdo">Copywriter / Conteúdo</option>
+                            <option value="Consultoria Externa">Consultoria Externa</option>
+                            <option value="Gestão de Projetos">Gestão de Projetos</option>
+                            <option value="Outro Profissional">Outro Profissional</option>
+                          </>
+                        ) : (
+                          <>
+                            <option value="Infraestrutura Cloud">Infraestrutura Cloud</option>
+                            <option value="Ferramenta / IA">Ferramenta / SaaS IA</option>
+                            <option value="Servidor & Hospedagem">Servidor & Hospedagem</option>
+                            <option value="APIs & Integrações">APIs & Integrações</option>
+                            <option value="Domínios & SSL">Domínios & SSL</option>
+                            <option value="Contabilidade & Jurídico">Contabilidade & Jurídico</option>
+                            <option value="Outra Estrutura">Outra Estrutura / Serviço</option>
+                          </>
+                        )}
                       </select>
                     </div>
                   </div>

@@ -80,6 +80,7 @@ export const initialSuppliers: Supplier[] = [
   {
     id: 'sup-1',
     name: 'Felipe Ramos (Dev Frontend / React)',
+    kind: 'FREELANCER_EQUIPE',
     category: 'Freelancer Dev',
     document: '234.567.890-11',
     email: 'felipe.dev@gmail.com',
@@ -97,6 +98,7 @@ export const initialSuppliers: Supplier[] = [
   {
     id: 'sup-2',
     name: 'Servidor VPS Oracle / Dokploy Host',
+    kind: 'ESTRUTURA_API',
     category: 'Infraestrutura Cloud',
     document: '12.345.678/0001-99',
     email: 'cloud@oracle.com',
@@ -110,6 +112,7 @@ export const initialSuppliers: Supplier[] = [
   {
     id: 'sup-3',
     name: 'OpenAI API & Anthropic',
+    kind: 'ESTRUTURA_API',
     category: 'Ferramenta / IA',
     email: 'billing@openai.com',
     billingModel: 'MONTHLY_RETAINER',
@@ -120,6 +123,7 @@ export const initialSuppliers: Supplier[] = [
   {
     id: 'sup-4',
     name: 'Camila Rocha (Designer UI/UX & Brand)',
+    kind: 'FREELANCER_EQUIPE',
     category: 'Designer UI/UX',
     document: '345.678.901-22',
     email: 'camila.design@gmail.com',

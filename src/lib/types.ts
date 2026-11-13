@@ -28,9 +28,12 @@ export interface Client {
 
 export type SupplierBillingModel = 'FIXED_PROJECT' | 'MONTHLY_RETAINER' | 'HOURLY_RATE' | 'FLEXIBLE';
 
+export type SupplierKind = 'FREELANCER_EQUIPE' | 'ESTRUTURA_API';
+
 export interface Supplier {
   id: string;
   name: string;
+  kind?: SupplierKind; // 'FREELANCER_EQUIPE' (mão de obra) ou 'ESTRUTURA_API' (setup/infra/apis)
   document?: string; // CNPJ ou CPF
   category: string;
   email?: string;
@@ -44,6 +47,51 @@ export interface Supplier {
   skills?: string; // Tecnologias ou especialidades principais
   notes?: string;
   createdAt?: string;
+}
+
+// Helpers para classificar Fornecedores entre Mão de Obra (Freelancers/Equipe) e Estrutura (Servidores/APIs)
+export function isFreelancerOrTeam(s: Supplier): boolean {
+  if (s.kind === 'FREELANCER_EQUIPE') return true;
+  if (s.kind === 'ESTRUTURA_API') return false;
+  const cat = (s.category || '').toLowerCase();
+  const name = (s.name || '').toLowerCase();
+  if (
+    cat.includes('freelancer') ||
+    cat.includes('equipe') ||
+    cat.includes('dev') ||
+    cat.includes('design') ||
+    cat.includes('copy') ||
+    cat.includes('gestor') ||
+    cat.includes('mão de obra') ||
+    cat.includes('tráfego') ||
+    cat.includes('consultoria') ||
+    name.includes('freelancer') ||
+    name.includes('dev')
+  ) {
+    return true;
+  }
+  if (
+    cat.includes('infra') ||
+    cat.includes('cloud') ||
+    cat.includes('servidor') ||
+    cat.includes('hospedagem') ||
+    cat.includes('api') ||
+    cat.includes('ferramenta') ||
+    cat.includes('saas') ||
+    cat.includes('ia') ||
+    name.includes('servidor') ||
+    name.includes('vps') ||
+    name.includes('openai') ||
+    name.includes('api')
+  ) {
+    return false;
+  }
+  if (s.hourlyRate && s.hourlyRate > 0) return true;
+  return true;
+}
+
+export function isStructureOrApi(s: Supplier): boolean {
+  return !isFreelancerOrTeam(s);
 }
 
 export type ContactChannel = 'WHATSAPP' | 'EMAIL' | 'CALL' | 'MEETING' | 'IN_PERSON';
@@ -101,6 +149,7 @@ export interface ProposalTeamMember {
 
 export interface ProposalStructureItem {
   id: string;
+  supplierId?: string;
   name: string;
   category: 'SETUP' | 'THIRD_PARTY';
   cost: number;

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { initialProposals, initialClients, initialSuppliers } from '@/lib/mockData';
-import { Proposal, Client, Supplier, ProposalTeamMember, ProposalStructureItem } from '@/lib/types';
+import { Proposal, Client, Supplier, ProposalTeamMember, ProposalStructureItem, isFreelancerOrTeam, isStructureOrApi } from '@/lib/types';
 import {
   Calculator,
   Plus,
@@ -137,8 +137,9 @@ export default function OrcamentosPage() {
     setScopeDetails('');
     setValidUntil(new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0]);
 
-    // Inicializar equipe padrão com primeiro parceiro se houver
-    const defaultPartner = availableSuppliers[0];
+    // Inicializar equipe padrão com primeiro parceiro que é FREELANCER ou EQUIPE
+    const teamPartners = availableSuppliers.filter(isFreelancerOrTeam);
+    const defaultPartner = teamPartners[0];
     setTeamMembers(
       defaultPartner
         ? [
@@ -156,20 +157,40 @@ export default function OrcamentosPage() {
         : []
     );
 
-    setStructureItems([
-      {
-        id: `str-1`,
-        name: 'Servidor VPS Oracle / Dokploy Host',
-        category: 'SETUP',
-        cost: 300,
-      },
-      {
-        id: `str-2`,
-        name: 'APIs Inteligência Artificial & Terceiros',
-        category: 'THIRD_PARTY',
-        cost: 250,
-      },
-    ]);
+    // Inicializar estrutura com os fornecedores que são ESTRUTURA/APIs (todos MENOS freelancer e equipe)
+    const structPartners = availableSuppliers.filter(isStructureOrApi);
+    if (structPartners.length > 0) {
+      setStructureItems(
+        structPartners.map((s, idx) => {
+          const isApi = (s.category || '').toLowerCase().includes('api') || (s.category || '').toLowerCase().includes('ia');
+          const cost = s.monthlyRetainer || s.fixedProjectCost || (isApi ? 250 : 300);
+          return {
+            id: `str-${Date.now()}-${idx}`,
+            supplierId: s.id,
+            name: s.name,
+            category: isApi ? 'THIRD_PARTY' : 'SETUP',
+            cost,
+          };
+        })
+      );
+    } else {
+      setStructureItems([
+        {
+          id: `str-1`,
+          supplierId: '',
+          name: 'Servidor VPS Oracle / Dokploy Host',
+          category: 'SETUP',
+          cost: 300,
+        },
+        {
+          id: `str-2`,
+          supplierId: '',
+          name: 'APIs Inteligência Artificial & Terceiros',
+          category: 'THIRD_PARTY',
+          cost: 250,
+        },
+      ]);
+    }
 
     setShowModal(true);
   };
@@ -193,7 +214,8 @@ export default function OrcamentosPage() {
     if (prop.teamMembers && prop.teamMembers.length > 0) {
       setTeamMembers(prop.teamMembers.map((m) => ({ ...m })));
     } else {
-      const defaultPartner = availableSuppliers[0];
+      const teamPartners = availableSuppliers.filter(isFreelancerOrTeam);
+      const defaultPartner = teamPartners[0];
       setTeamMembers(
         defaultPartner
           ? [
@@ -218,12 +240,14 @@ export default function OrcamentosPage() {
       setStructureItems([
         {
           id: `str-1`,
+          supplierId: '',
           name: 'Setup de Servidores & Hospedagem',
           category: 'SETUP',
           cost: prop.setupCost,
         },
         {
           id: `str-2`,
+          supplierId: '',
           name: 'APIs & Ferramentas de Terceiros',
           category: 'THIRD_PARTY',
           cost: prop.thirdPartyCost,
@@ -326,7 +350,9 @@ export default function OrcamentosPage() {
   // GESTÃO DO SUB-MODAL DE CÁLCULO DE EQUIPE & ESTRUTURA
   // ----------------------------------------------------
   const handleAddTeamMember = () => {
-    const firstSup = availableSuppliers[0];
+    // 1. Mão de Obra da Equipe & Freelancers: somente os que estão como freelancer ou equipe
+    const teamSuppliers = availableSuppliers.filter(isFreelancerOrTeam);
+    const firstSup = teamSuppliers[0] || availableSuppliers[0];
     const newMember: ProposalTeamMember = {
       id: `mem-${Date.now()}-${Math.random()}`,
       supplierId: firstSup?.id || '',
@@ -374,20 +400,43 @@ export default function OrcamentosPage() {
     setTeamMembers(teamMembers.filter((m) => m.id !== id));
   };
 
-  // Estrutura & Infraestrutura
+  // 2. Estrutura Necessária: Setup, Infraestrutura & APIs de Terceiros (todos menos freelancer e equipe)
   const handleAddStructureItem = () => {
+    const structSuppliers = availableSuppliers.filter(isStructureOrApi);
+    const firstSup = structSuppliers[0];
+    const isApi = firstSup && ((firstSup.category || '').toLowerCase().includes('api') || (firstSup.category || '').toLowerCase().includes('ia'));
+    const defaultCost = firstSup ? (firstSup.monthlyRetainer || firstSup.fixedProjectCost || 200) : 200;
+
     const newItem: ProposalStructureItem = {
       id: `str-${Date.now()}-${Math.random()}`,
-      name: 'Infraestrutura / Ferramenta Adicional',
-      category: 'SETUP',
-      cost: 200,
+      supplierId: firstSup?.id || '',
+      name: firstSup?.name || 'Servidor / Licença Adicional',
+      category: isApi ? 'THIRD_PARTY' : 'SETUP',
+      cost: defaultCost,
     };
     setStructureItems([...structureItems, newItem]);
   };
 
   const handleUpdateStructureItem = (id: string, field: keyof ProposalStructureItem, value: any) => {
     setStructureItems(
-      structureItems.map((s) => (s.id === id ? { ...s, [field]: value } : s))
+      structureItems.map((s) => {
+        if (s.id !== id) return s;
+        const updated = { ...s, [field]: value };
+
+        // Se selecionou um fornecedor cadastrado de estrutura/API
+        if (field === 'supplierId') {
+          const sup = availableSuppliers.find((item) => item.id === value);
+          if (sup) {
+            updated.name = sup.name;
+            const isApi = (sup.category || '').toLowerCase().includes('api') || (sup.category || '').toLowerCase().includes('ia');
+            updated.category = isApi ? 'THIRD_PARTY' : 'SETUP';
+            const cost = sup.monthlyRetainer || sup.fixedProjectCost || 0;
+            if (cost > 0) updated.cost = cost;
+          }
+        }
+
+        return updated;
+      })
     );
   };
 
@@ -953,22 +1002,24 @@ export default function OrcamentosPage() {
                         className="p-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl space-y-2 text-xs"
                       >
                         <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center">
-                          {/* Selecionar Parceiro Cadastrado */}
+                          {/* Selecionar Parceiro Cadastrado (SOMENTE FREELANCER OU EQUIPE) */}
                           <div className="sm:col-span-4">
                             <label className="text-[10px] font-semibold text-slate-400 block mb-0.5">
-                              Parceiro Cadastrado ({index + 1})
+                              Freelancer / Equipe ({index + 1})
                             </label>
                             <select
                               value={member.supplierId}
                               onChange={(e) => handleUpdateTeamMember(member.id, 'supplierId', e.target.value)}
                               className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-1.5 text-xs text-slate-800 dark:text-white font-medium focus:outline-none focus:border-cyan-500"
                             >
-                              <option value="">Selecione parceiro...</option>
-                              {availableSuppliers.map((s) => (
-                                <option key={s.id} value={s.id}>
-                                  {s.name} ({s.category})
-                                </option>
-                              ))}
+                              <option value="">Selecione freelancer / profissional...</option>
+                              {availableSuppliers
+                                .filter(isFreelancerOrTeam)
+                                .map((s) => (
+                                  <option key={s.id} value={s.id}>
+                                    {s.name} ({s.category})
+                                  </option>
+                                ))}
                             </select>
                           </div>
 
@@ -1069,69 +1120,121 @@ export default function OrcamentosPage() {
                   </button>
                 </div>
 
-                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                  {structureItems.map((item) => (
+                <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
+                  {structureItems.length === 0 ? (
                     <div
-                      key={item.id}
-                      className="p-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl grid grid-cols-1 sm:grid-cols-12 gap-2 items-center text-xs"
+                      onClick={handleAddStructureItem}
+                      className="p-5 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl cursor-pointer hover:border-indigo-500/50 transition-colors"
                     >
-                      <div className="sm:col-span-6">
-                        <input
-                          type="text"
-                          placeholder="Ex: Servidor VPS Oracle / Dokploy Host, API OpenAI..."
-                          value={item.name}
-                          onChange={(e) => handleUpdateStructureItem(item.id, 'name', e.target.value)}
-                          className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-1.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-cyan-500"
-                        />
-                      </div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        Nenhum custo de infraestrutura ou API adicionado.
+                      </p>
+                      <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 mt-1 inline-block">
+                        + Clique aqui para adicionar servidor, hospedagem ou API
+                      </span>
+                    </div>
+                  ) : (
+                    structureItems.map((item, idx) => (
+                      <div
+                        key={item.id}
+                        className="p-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl space-y-2 text-xs"
+                      >
+                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center">
+                          {/* 1. Selecionar Fornecedor Cadastrado (TODOS MENOS FREELANCER E EQUIPE) */}
+                          <div className="sm:col-span-4">
+                            <label className="text-[10px] font-semibold text-slate-400 block mb-0.5">
+                              Item / Fornecedor Estrutura ({idx + 1})
+                            </label>
+                            <select
+                              value={item.supplierId || ''}
+                              onChange={(e) =>
+                                handleUpdateStructureItem(item.id, 'supplierId', e.target.value)
+                              }
+                              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-1.5 text-xs text-slate-800 dark:text-white font-medium focus:outline-none focus:border-indigo-500"
+                            >
+                              <option value="">Personalizado / Outro Custo...</option>
+                              {availableSuppliers
+                                .filter(isStructureOrApi)
+                                .map((s) => (
+                                  <option key={s.id} value={s.id}>
+                                    {s.name} ({s.category})
+                                  </option>
+                                ))}
+                            </select>
+                          </div>
 
-                      <div className="sm:col-span-3">
-                        <select
-                          value={item.category}
-                          onChange={(e) =>
-                            handleUpdateStructureItem(
-                              item.id,
-                              'category',
-                              e.target.value as 'SETUP' | 'THIRD_PARTY'
-                            )
-                          }
-                          className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-1.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-cyan-500"
-                        >
-                          <option value="SETUP">Setup & Infraestrutura</option>
-                          <option value="THIRD_PARTY">Terceiros & APIs</option>
-                        </select>
-                      </div>
+                          {/* 2. Nome / Descrição */}
+                          <div className="sm:col-span-3">
+                            <label className="text-[10px] font-semibold text-slate-400 block mb-0.5">
+                              Descrição
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="Ex: Servidor VPS Oracle, API OpenAI..."
+                              value={item.name}
+                              onChange={(e) => handleUpdateStructureItem(item.id, 'name', e.target.value)}
+                              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-1.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-indigo-500"
+                            />
+                          </div>
 
-                      <div className="sm:col-span-2">
-                        <div className="relative">
-                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-mono">
-                            R$
-                          </span>
-                          <input
-                            type="number"
-                            min="0"
-                            placeholder="0,00"
-                            value={item.cost}
-                            onChange={(e) =>
-                              handleUpdateStructureItem(item.id, 'cost', Number(e.target.value))
-                            }
-                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg pl-6 pr-1.5 py-1.5 text-xs text-slate-800 dark:text-white font-mono font-bold focus:outline-none focus:border-cyan-500"
-                          />
+                          {/* 3. Classificação */}
+                          <div className="sm:col-span-2">
+                            <label className="text-[10px] font-semibold text-slate-400 block mb-0.5">
+                              Tipo
+                            </label>
+                            <select
+                              value={item.category}
+                              onChange={(e) =>
+                                handleUpdateStructureItem(
+                                  item.id,
+                                  'category',
+                                  e.target.value as 'SETUP' | 'THIRD_PARTY'
+                                )
+                              }
+                              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-1.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-indigo-500"
+                            >
+                              <option value="SETUP">Setup / Infra</option>
+                              <option value="THIRD_PARTY">APIs / Terceiros</option>
+                            </select>
+                          </div>
+
+                          {/* 4. Valor (R$) */}
+                          <div className="sm:col-span-2">
+                            <label className="text-[10px] font-semibold text-slate-400 block mb-0.5">
+                              Custo (R$)
+                            </label>
+                            <div className="relative">
+                              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-mono">
+                                R$
+                              </span>
+                              <input
+                                type="number"
+                                min="0"
+                                placeholder="0,00"
+                                value={item.cost}
+                                onChange={(e) =>
+                                  handleUpdateStructureItem(item.id, 'cost', Number(e.target.value))
+                                }
+                                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg pl-6 pr-1.5 py-1.5 text-xs text-slate-800 dark:text-white font-mono font-bold focus:outline-none focus:border-indigo-500"
+                              />
+                            </div>
+                          </div>
+
+                          {/* 5. Remover */}
+                          <div className="sm:col-span-1 flex items-center justify-end pt-2 sm:pt-4">
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveStructureItem(item.id)}
+                              className="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                              title="Remover custo de estrutura"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
                       </div>
-
-                      <div className="sm:col-span-1 text-right">
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveStructureItem(item.id)}
-                          className="p-1 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                          title="Remover item de estrutura"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
 
